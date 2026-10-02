@@ -1,0 +1,85 @@
+name: Test and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Never run two deploys at once; a newer push waits for the current one.
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e '.[dev]'
+      - run: ruff check src tests
+      - run: ruff format --check src tests
+      - run: pytest -q
+
+  deploy:
+    needs: test
+    # Deploy only from main (pushes or a manual run), never from pull requests.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      # Relative to the deploy user's home directory on the VPS.
+      APP_DIR: Content-Marketing-Automation
+      SSH_TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
+      SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Pinned host key: refuses to connect if the server's identity changes.
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host vps
+            HostName ${{ secrets.VPS_HOST }}
+            User ${{ secrets.VPS_USER }}
+            Port $SSH_PORT
+            IdentityFile ~/.ssh/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking yes
+          EOF
+
+      - name: Sync code to VPS
+        run: |
+          echo "$GITHUB_SHA" > .deployed-sha
+          ssh vps "mkdir -p $APP_DIR"
+          # Runtime state on the server (.env, database, rendered files, venv, logs)
+          # is excluded, so --delete never touches it.
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude '.env' \
+            --exclude '.venv/' \
+            --exclude 'data/' \
+            --exclude 'output/' \
+            --exclude 'logs/' \
+            --exclude '__pycache__/' \
+            --exclude '*.egg-info/' \
+            ./ "vps:$APP_DIR/"
+
+      - name: Install and restart on VPS
+        run: ssh vps "bash $APP_DIR/scripts/deploy_remote.sh"

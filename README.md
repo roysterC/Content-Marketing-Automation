@@ -70,12 +70,44 @@ The script installs everything (system packages, Claude Code, Python env, Chromi
 It finishes by printing the steps that need you: `claude setup-token` and the Telegram settings.
 It's safe to re-run. What it sets up:
 
-```cron
-# Weekdays 07:00: research + drafts land in Telegram before the working day
-0 7 * * 1-5  cd /opt/content-agent && .venv/bin/content-agent run >> logs/run.log 2>&1
-```
+- a systemd service, `content-agent-bot`, that keeps the Telegram buttons working
+- a cron job that runs `content-agent run` on weekdays at 07:00 server time, so drafts arrive before the working day
 
-Keep `content-agent bot` running under systemd (or `tmux`) so the buttons work.
+### Automatic deploys from GitHub
+
+`.github/workflows/deploy.yml` runs the tests on every push and pull request. On a push to
+`main`, it then copies the code to the VPS with rsync, installs dependencies and restarts
+the bot. Your `.env`, database, rendered files and logs on the server are never touched.
+Everything else matches `main`, so edit config files such as `brand_voice.md` and
+`examples/` in the repo, not on the server.
+
+One-time setup:
+
+1. **Create a key just for deploys** on your own computer, so you aren't handing your
+   personal SSH key to GitHub:
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/content_agent_deploy -N "" -C "github-deploy"
+   ssh-copy-id -i ~/.ssh/content_agent_deploy.pub YOUR_USER@YOUR_VPS_IP
+   ```
+2. **Get the server's fingerprint**, so GitHub can check it's talking to your real server:
+   ```bash
+   ssh-keyscan -p 22 YOUR_VPS_IP
+   ```
+3. **Add the repository secrets** under GitHub → Settings → Secrets and variables → Actions:
+
+   | Secret | Value |
+   |---|---|
+   | `VPS_HOST` | the server's IP address or hostname |
+   | `VPS_USER` | the SSH user, e.g. `root` |
+   | `VPS_SSH_KEY` | the entire contents of `~/.ssh/content_agent_deploy`, the private key |
+   | `VPS_KNOWN_HOSTS` | the full output of the `ssh-keyscan` command |
+   | `VPS_PORT` | optional; only needed if SSH isn't on port 22 |
+
+4. **Run `scripts/setup_vps.sh` once by hand** on the server, as shown above. Later deploys
+   only update and restart. If you deploy as a user other than root, that user needs
+   passwordless sudo for `systemctl restart content-agent-bot`.
+
+To redeploy without pushing, go to the Actions tab → **Test and deploy** → **Run workflow**.
 
 ## What to customise
 

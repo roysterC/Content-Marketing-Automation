@@ -29,6 +29,7 @@ if ! command -v claude >/dev/null; then
   curl -fsSL https://claude.ai/install.sh | bash
 fi
 if ! grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null; then
+  # shellcheck disable=SC2016  # written literally so it expands at login
   echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$HOME/.bashrc"
 fi
 claude --version
