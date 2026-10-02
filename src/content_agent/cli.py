@@ -60,6 +60,24 @@ def brief(
 
 
 @app.command()
+def idea(
+    sector: Annotated[
+        str | None, typer.Option(help="Business type, e.g. 'nail salons'. Random if omitted")
+    ] = None,
+    send: Annotated[bool, typer.Option(help="Send it to Telegram when ready")] = True,
+) -> None:
+    """Have Claude come up with an automation idea (web-checked) with an infographic."""
+    from content_agent.drafting.idea import generate_idea
+
+    ids = generate_idea(sector)
+    typer.echo(f"Created drafts {ids}")
+    if send:
+        from content_agent.approval.telegram_bot import send_pending
+
+        typer.echo(f"Sent {send_pending()} drafts for review")
+
+
+@app.command()
 def render() -> None:
     """Render carousel PDFs for drafts that need them."""
     from content_agent.visuals.render import render_pending

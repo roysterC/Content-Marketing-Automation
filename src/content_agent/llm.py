@@ -39,22 +39,35 @@ def ask_json(
     schema: dict,
     effort: str = "medium",
     max_tokens: int = 16000,
+    web: bool = False,
 ) -> dict:
     """Send one request and return the JSON object Claude produced.
 
     Keep `system` stable across calls (brand voice, examples, instructions) and put
     anything that varies in `prompt`, so repeated runs can reuse the prompt cache.
+
+    web=True lets Claude search and read web pages before answering (claude_code
+    backend only; the api backend answers from Claude's own knowledge).
     """
     if get_settings().llm_backend == "api":
         return _ask_api(system, prompt, schema, effort, max_tokens)
-    return _ask_claude_code(system, prompt, schema, effort)
+    return _ask_claude_code(system, prompt, schema, effort, web)
 
 
 # --- claude_code backend ---
 
 
-def claude_code_command(schema: dict, system_file: Path, effort: str) -> list[str]:
+WEB_TOOLS = "WebSearch,WebFetch"
+
+
+def claude_code_command(
+    schema: dict, system_file: Path, effort: str, web: bool = False
+) -> list[str]:
     s = get_settings()
+    # Text-in/JSON-out by default: no file, shell, web or MCP tools. With web=True,
+    # only web search/fetch are enabled (and pre-approved, since nobody is there to
+    # answer a permission prompt).
+    tools = ["--tools", WEB_TOOLS, "--allowedTools", WEB_TOOLS] if web else ["--tools", ""]
     return [
         s.claude_cli,
         "-p",
@@ -63,14 +76,13 @@ def claude_code_command(schema: dict, system_file: Path, effort: str) -> list[st
         "--system-prompt-file", str(system_file),
         "--model", s.claude_model,
         "--effort", effort,
-        # Pure text-in/JSON-out: no file, shell, web or MCP tools.
-        "--tools", "",
+        *tools,
         "--disallowedTools", "mcp__*",
         "--no-session-persistence",
     ]  # fmt: skip
 
 
-def _ask_claude_code(system: str, prompt: str, schema: dict, effort: str) -> dict:
+def _ask_claude_code(system: str, prompt: str, schema: dict, effort: str, web: bool) -> dict:
     # ANTHROPIC_API_KEY outranks the subscription login in `claude -p`, so drop it to
     # make sure this backend really runs on the plan.
     env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
@@ -84,7 +96,7 @@ def _ask_claude_code(system: str, prompt: str, schema: dict, effort: str) -> dic
         system_file.write_text(system)
         try:
             proc = subprocess.run(
-                claude_code_command(schema, system_file, effort),
+                claude_code_command(schema, system_file, effort, web),
                 input=prompt,
                 capture_output=True,
                 text=True,

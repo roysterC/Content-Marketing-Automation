@@ -54,3 +54,29 @@ def test_format_draft_flags_factcheck_issues():
 
 def test_edit_prompt_round_trips_draft_id():
     assert EDIT_RE.match(EDIT_PROMPT.format(id=42)).group(1) == "42"
+
+
+def test_idea_infographic_html_renders_steps_and_escapes():
+    from content_agent.visuals.render import render_idea_html
+
+    idea = {
+        "sector": "Nail salons",
+        "title": "Turn missed calls into bookings",
+        "problem": "<b>Phones</b> ring mid-set.",
+        "steps": [{"title": f"Step {n}", "detail": "Detail"} for n in range(1, 5)],
+        "impact": [{"value": "~2 hrs", "label": "a week back"}, {"value": "24/7", "label": "x"}],
+        "impact_note": "Illustrative estimates.",
+        "cta": "DM me CALLS",
+    }
+    html = render_idea_html(idea)
+    assert html.count('class="step"') == 4
+    assert "--cols: 2" in html
+    assert "<b>Phones</b>" not in html
+
+
+def test_format_draft_labels_claude_ideas():
+    from content_agent.db import Item
+
+    item = Item(url="idea:abc", title="t", source="Claude idea", business_type="barbers")
+    d = Draft(id=3, platform="facebook", pillar="workflow", hook="h", body="b", item=item)
+    assert "Claude's own idea (barbers)" in format_draft(d)

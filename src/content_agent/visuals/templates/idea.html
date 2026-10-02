@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Automation idea</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Brand tokens - shared look with carousel.html. */
+  :root {
+    --bg: #0f1b2d;
+    --bg-2: #16263f;
+    --card: rgba(255, 255, 255, 0.05);
+    --card-border: rgba(255, 255, 255, 0.10);
+    --text: #f4f1ea;
+    --muted: #a9b4c6;
+    --accent: #f2a541;
+    --accent-soft: rgba(242, 165, 65, 0.14);
+    --good: #7fd1ae;
+  }
+  /* All sizes are in rem so the fit-to-page script can shrink everything evenly. */
+  html { font-size: 16px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1080px; height: 1350px; overflow: hidden;
+    font-family: "Inter", system-ui, sans-serif; color: var(--text);
+    background:
+      radial-gradient(900px 600px at 100% 0%, rgba(242, 165, 65, 0.12), transparent 60%),
+      radial-gradient(700px 500px at 0% 100%, rgba(127, 209, 174, 0.08), transparent 60%),
+      linear-gradient(160deg, var(--bg) 55%, var(--bg-2));
+  }
+  .page {
+    height: 1350px; padding: 4.5rem 4.5rem 3.5rem;
+    display: flex; flex-direction: column; gap: 2rem;
+  }
+
+  .eyebrow { display: flex; align-items: center; gap: 1rem; font-size: 1.35rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .pill { padding: 0.45rem 1.1rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); letter-spacing: 0.04em; text-transform: none; font-weight: 600; }
+  h1 { font-size: 4.1rem; line-height: 1.08; font-weight: 800; letter-spacing: -0.02em; }
+
+  .problem {
+    border-left: 0.4rem solid var(--accent); padding: 0.4rem 0 0.4rem 1.5rem;
+    font-size: 1.7rem; line-height: 1.45; color: var(--muted);
+  }
+  .problem strong { color: var(--text); font-weight: 600; }
+
+  .label { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 1rem; }
+
+  .flow { display: flex; flex-direction: column; position: relative; }
+  .step { display: grid; grid-template-columns: 3.6rem 1fr; gap: 1.4rem; position: relative; padding-bottom: 1.3rem; }
+  .step:last-child { padding-bottom: 0; }
+  .step:not(:last-child)::before {
+    content: ""; position: absolute; left: 1.75rem; top: 3.6rem; bottom: 0;
+    width: 0.12rem; background: linear-gradient(var(--accent), rgba(242, 165, 65, 0.15));
+  }
+  .num {
+    width: 3.6rem; height: 3.6rem; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--accent); color: var(--bg); font-weight: 800; font-size: 1.5rem;
+    box-shadow: 0 0 0 0.45rem var(--accent-soft);
+  }
+  .step-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 1.1rem; padding: 1rem 1.4rem; }
+  .step-title { font-size: 1.65rem; font-weight: 600; line-height: 1.25; }
+  .step-text { font-size: 1.35rem; line-height: 1.4; color: var(--muted); margin-top: 0.25rem; }
+
+  .impact { display: grid; grid-template-columns: repeat(var(--cols), 1fr); gap: 1rem; margin-top: auto; }
+  .stat { background: var(--card); border: 1px solid var(--card-border); border-radius: 1.1rem; padding: 1.2rem 1.3rem; }
+  .stat-value { font-size: 2.3rem; font-weight: 800; color: var(--good); line-height: 1.1; }
+  .stat-label { font-size: 1.2rem; color: var(--muted); margin-top: 0.35rem; line-height: 1.3; }
+  .note { font-size: 1rem; color: var(--muted); opacity: 0.8; margin-top: 0.6rem; }
+
+  .footer { display: flex; justify-content: space-between; align-items: center; padding-top: 1.4rem; border-top: 1px solid var(--card-border); font-size: 1.3rem; color: var(--muted); }
+  .footer strong { color: var(--text); }
+  .cta { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+  <main class="page" id="page">
+    <div class="eyebrow">Automation idea <span class="pill">{{ idea.sector }}</span></div>
+    <h1>{{ idea.title }}</h1>
+    <p class="problem"><strong>The problem:</strong> {{ idea.problem }}</p>
+
+    <section>
+      <div class="label">How it works</div>
+      <div class="flow">
+        {% for step in idea.steps %}
+        <div class="step">
+          <div class="num">{{ loop.index }}</div>
+          <div class="step-card">
+            <div class="step-title">{{ step.title }}</div>
+            <div class="step-text">{{ step.detail }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section style="margin-top: auto">
+      <div class="impact" style="--cols: {{ idea.impact | length }}">
+        {% for s in idea.impact %}
+        <div class="stat">
+          <div class="stat-value">{{ s.value }}</div>
+          <div class="stat-label">{{ s.label }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="note">{{ idea.impact_note }}</div>
+    </section>
+
+    <div class="footer">
+      <span><strong>{{ author }}</strong> · {{ tagline }}</span>
+      <span class="cta">{{ idea.cta }}</span>
+    </div>
+  </main>
+  <script>
+    // Shrink everything evenly until the content fits the 1080x1350 canvas.
+    // Runs after web fonts load (they change text width); the renderer waits for
+    // data-ready before taking the screenshot.
+    function fit() {
+      const page = document.getElementById("page");
+      let size = 16;
+      document.documentElement.style.fontSize = size + "px";
+      while (page.scrollHeight > page.clientHeight && size > 10) {
+        size -= 0.5;
+        document.documentElement.style.fontSize = size + "px";
+      }
+    }
+    document.fonts.ready.then(fit).finally(() => { document.body.dataset.ready = "1"; });
+  </script>
+</body>
+</html>

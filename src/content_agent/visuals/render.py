@@ -29,6 +29,23 @@ def render_html(slides: list[dict], template: str = "carousel.html") -> str:
     return _env.get_template(template).render(slides=slides, author=AUTHOR, tagline=TAGLINE)
 
 
+def render_idea_html(idea: dict) -> str:
+    return _env.get_template("idea.html").render(idea=idea, author=AUTHOR, tagline=TAGLINE)
+
+
+def render_png(html: str, out_path: Path) -> Path:
+    """Screenshot a single 1080x1350 page (templates that set data-ready when laid out)."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=get_settings().chromium_path or None)
+        page = browser.new_page(viewport={"width": SLIDE_W, "height": SLIDE_H})
+        page.set_content(html, wait_until="networkidle")
+        page.wait_for_selector("body[data-ready]", state="attached", timeout=15000)
+        page.screenshot(path=str(out_path))
+        browser.close()
+    return out_path
+
+
 def render_carousel(slides: list[dict], out_stem: Path) -> Path:
     """Write <out_stem>.pdf (all slides) and <out_stem>-cover.png. Returns the PDF path."""
     out_stem.parent.mkdir(parents=True, exist_ok=True)

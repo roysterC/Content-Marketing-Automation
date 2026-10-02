@@ -46,7 +46,9 @@ def format_draft(d: Draft) -> str:
     lines = [f"#{d.id} · {platform} · {d.pillar}", "", d.body]
     if d.first_comment:
         lines += ["", "— First comment —", d.first_comment]
-    if d.item:
+    if d.item and d.item.url.startswith("idea:"):
+        lines += ["", f"Source: Claude's own idea ({d.item.business_type}), web-checked"]
+    elif d.item:
         lines += ["", f"Source: {d.item.source} — {d.item.url}"]
     fc = d.factcheck or {}
     if fc.get("verdict") == "needs_attention":
@@ -73,6 +75,13 @@ def keyboard(draft_id: int) -> InlineKeyboardMarkup:
 
 
 async def _send_draft(bot: Bot, chat_id: str, d: Draft) -> int:
+    from content_agent.drafting.idea import idea_image_path
+
+    image = idea_image_path(d.id)
+    if image.exists():
+        # As a document, not a photo: Telegram recompresses photos, and this is the
+        # full-quality PNG to upload to LinkedIn/Facebook.
+        await bot.send_document(chat_id, image, caption=f"Infographic for draft #{d.id}")
     if d.carousel_path and Path(d.carousel_path).exists():
         await bot.send_document(
             chat_id, Path(d.carousel_path), caption=f"Carousel for draft #{d.id}"
@@ -81,9 +90,12 @@ async def _send_draft(bot: Bot, chat_id: str, d: Draft) -> int:
     return msg.message_id
 
 
-async def _send_pending(bot: Bot, chat_id: str) -> int:
+async def _send_pending(bot: Bot, chat_id: str, ids: list[int] | None = None) -> int:
     with session() as db:
-        drafts = list(db.scalars(select(Draft).where(Draft.status == "pending").order_by(Draft.id)))
+        query = select(Draft).where(Draft.status == "pending").order_by(Draft.id)
+        if ids is not None:
+            query = query.where(Draft.id.in_(ids))
+        drafts = list(db.scalars(query))
         for d in drafts:
             d.telegram_message_id = await _send_draft(bot, chat_id, d)
             d.status = "sent"
@@ -157,6 +169,24 @@ async def on_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text("No pending drafts.")
 
 
+async def on_idea(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/idea [business type] - generate a fresh automation idea and send it here."""
+    from content_agent.drafting.idea import generate_idea
+
+    sector = " ".join(context.args).strip() or None
+    await update.message.reply_text(
+        f"Working on an idea for {sector or 'a random business type'}. "
+        "This takes a few minutes (research, writing, fact-check, graphics)."
+    )
+    try:
+        ids = await asyncio.to_thread(generate_idea, sector)
+    except Exception as e:
+        log.exception("Idea generation failed")
+        await update.message.reply_text(f"Idea generation failed: {e}"[:TELEGRAM_LIMIT])
+        return
+    await _send_pending(context.bot, str(update.effective_chat.id), ids)
+
+
 async def on_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
 
@@ -168,6 +198,8 @@ def run_bot() -> None:
     app.add_handler(CallbackQueryHandler(on_noop, pattern=r"^noop:"))
     app.add_handler(CallbackQueryHandler(on_button, pattern=r"^(approve|edit|reject):\d+$"))
     app.add_handler(CommandHandler("pending", on_pending, filters=only_roy))
+    # block=False: generating takes minutes; keep handling buttons meanwhile.
+    app.add_handler(CommandHandler("idea", on_idea, filters=only_roy, block=False))
     app.add_handler(MessageHandler(only_roy & filters.REPLY & filters.TEXT, on_reply))
     log.info("Approval bot running")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
