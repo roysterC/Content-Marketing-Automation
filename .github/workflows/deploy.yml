@@ -18,8 +18,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -40,7 +40,7 @@ jobs:
       SSH_TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
       SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Configure SSH
         env:
@@ -61,6 +61,17 @@ jobs:
             IdentityFile ~/.ssh/deploy_key
             IdentitiesOnly yes
             StrictHostKeyChecking yes
+          EOF
+
+      - name: Ensure rsync on VPS
+        run: |
+          ssh vps 'bash -s' <<'EOF'
+          set -e
+          command -v rsync >/dev/null && exit 0
+          echo "Installing rsync"
+          if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo -n"; fi
+          $SUDO env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rsync
           EOF
 
       - name: Sync code to VPS
