@@ -39,7 +39,7 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 ## Proposed stack
 - Python service on a small VPS, cron for scheduling (n8n self-hosted is an acceptable alternative)
 - Postgres / Supabase: sources, content queue, post status, metrics
-- Claude API for scoring, drafting, fact-check
+- Claude (via Claude Code CLI on Roy's plan, or the API) for scoring, drafting, fact-check
 - Playwright for template rendering
 - Slack or Telegram bot for approvals
 - Scheduler API for publishing
@@ -54,6 +54,7 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 ## Decisions made
 - Approvals: **Telegram** (free, works well on a phone, simple bot API)
 - Orchestration: **Python service + cron** (code lives in `src/content_agent/`, see README)
+- Claude access: **Roy's Claude Pro/Max plan via the Claude Code CLI** (`claude -p`, `LLM_BACKEND=claude_code`) to avoid API costs; the pay-per-token API backend stays available (`LLM_BACKEND=api`)
 
 ## Open decisions
 - Which scheduler (Buffer / Publer / Metricool)

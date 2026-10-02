@@ -20,6 +20,15 @@ playwright install --with-deps chromium     # or set CHROMIUM_PATH in .env
 cp .env.example .env                         # then fill it in
 ```
 
+Claude access: by default this uses your Claude Pro or Max plan through the
+[Claude Code](https://code.claude.com) CLI. You don't need an API key.
+1. Install Claude Code (`npm install -g @anthropic-ai/claude-code`, or see the docs).
+2. On your own machine, run `claude` once and log in.
+   On a VPS with no browser, run `claude setup-token` on any machine. It prints a token
+   that lasts one year. Put it in `.env` as `CLAUDE_CODE_OAUTH_TOKEN=...`.
+
+If you'd rather pay per token, set `LLM_BACKEND=api` and `ANTHROPIC_API_KEY`.
+
 Telegram bot setup:
 1. Message [@BotFather](https://t.me/BotFather) and send `/newbot`. Put the token in `TELEGRAM_BOT_TOKEN`.
 2. Send your new bot any message, then open `https://api.telegram.org/bot<TOKEN>/getUpdates`
@@ -59,11 +68,16 @@ Keep `content-agent bot` running under systemd (or `tmux`) so the buttons work.
 - `src/content_agent/prompts.py`: the audience description and hard rules, such as never inventing numbers.
 - `src/content_agent/visuals/templates/carousel.html`: carousel design. Edit the CSS variables at the top to change the brand colours.
 
-## Cost notes
+## Cost and usage notes
 
-- Scoring runs in batches of 20 items at low effort, so it is the cheap step.
-- Drafting and fact-checking run at higher effort, one pair of calls per idea. `--limit` caps how many ideas get drafted each run.
-- The system prompts are marked for prompt caching. Repeat calls within a few minutes pay much less for that shared part. Caching only kicks in once the prompt reaches the model's minimum size, so it starts helping after you add example posts.
+- **On your plan (default):** there's no per-token bill. Each run uses part of your plan's
+  usage limits, which are shared with your normal Claude and Claude Code use. A typical run
+  is one scoring call per 20 items plus two calls per drafted idea. If a scheduled run
+  hits your limit, the calls fail and the next run picks up where it stopped.
+- The `total_cost_usd` figure in Claude Code's output is an estimate of the API price.
+  You aren't charged it on a subscription.
+- Scoring runs at low effort, so it's the light step. Drafting and fact-checking run at higher effort.
+  `--limit` caps how many ideas get drafted each run.
 - The default model is `CLAUDE_MODEL=claude-opus-5-5`. You can change it in `.env`.
 
 ## Development
