@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Carousel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  /* Brand tokens - change these to restyle every carousel. */
+  :root {
+    --bg: #0f1b2d;
+    --bg-accent: #16263f;
+    --text: #f4f1ea;
+    --muted: #a9b4c6;
+    --accent: #f2a541;
+    --slide-w: 1080px;
+    --slide-h: 1350px;
+  }
+  @page { size: 1080px 1350px; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); }
+  body { font-family: "Inter", system-ui, sans-serif; color: var(--text); }
+
+  .slide {
+    width: var(--slide-w);
+    height: var(--slide-h);
+    padding: 110px 96px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 48px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(160deg, var(--bg) 60%, var(--bg-accent));
+    page-break-after: always;
+    break-after: page;
+  }
+  .slide:last-child { page-break-after: auto; break-after: auto; }
+
+  .num {
+    position: absolute; top: 80px; left: 96px;
+    font-size: 30px; font-weight: 600; color: var(--accent); letter-spacing: 2px;
+  }
+  h1 { font-size: 84px; line-height: 1.08; font-weight: 800; }
+  h2 { font-size: 66px; line-height: 1.12; font-weight: 800; }
+  p { font-size: 40px; line-height: 1.45; color: var(--muted); white-space: pre-line; }
+  .bar { width: 120px; height: 10px; background: var(--accent); border-radius: 5px; }
+
+  .footer {
+    position: absolute; bottom: 72px; left: 96px; right: 96px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 28px; color: var(--muted);
+  }
+  .footer strong { color: var(--text); font-weight: 600; }
+  .swipe { color: var(--accent); font-weight: 600; }
+
+  .cover h1 { font-size: 96px; }
+  .cta { background: var(--accent); color: var(--bg); }
+  .cta p, .cta .footer, .cta .num { color: var(--bg); }
+  .cta .bar { background: var(--bg); }
+  .cta .footer strong { color: var(--bg); }
+</style>
+</head>
+<body>
+{% for slide in slides %}
+  {% set first = loop.first %}{% set last = loop.last %}
+  <section class="slide{% if first %} cover{% elif last %} cta{% endif %}">
+    {% if not first %}<div class="num">{{ "%02d" % loop.index }} / {{ "%02d" % loop.length }}</div>{% endif %}
+    <div class="bar"></div>
+    {% if first %}<h1>{{ slide.title }}</h1>{% else %}<h2>{{ slide.title }}</h2>{% endif %}
+    {% if slide.body %}<p>{{ slide.body }}</p>{% endif %}
+    <div class="footer">
+      <span><strong>{{ author }}</strong> · {{ tagline }}</span>
+      {% if not last %}<span class="swipe">Swipe →</span>{% endif %}
+    </div>
+  </section>
+{% endfor %}
+</body>
+</html>
