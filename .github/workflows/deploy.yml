@@ -1,12 +1,16 @@
+# Test on every push/PR; deploy main to the VPS. Same shape as call-assistant's
+# deploy-netcup.yml: SSH in with appleboy/ssh-action, git reset --hard to the
+# pushed commit, install, restart.
 name: Test and deploy
 
 on:
   push:
     branches: [main]
   pull_request:
+  # Manual trigger, so a deploy can be re-run after fixing the box.
   workflow_dispatch:
 
-# Never run two deploys at once; a newer push waits for the current one.
+# One production deploy at a time; queue rather than cancel.
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
@@ -15,6 +19,7 @@ permissions:
   contents: read
 
 jobs:
+  # Fail fast on the runner, before anything touches production.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -30,67 +35,45 @@ jobs:
 
   deploy:
     needs: test
-    # Deploy only from main (pushes or a manual run), never from pull requests.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    environment: production
-    env:
-      # Relative to the deploy user's home directory on the VPS.
-      APP_DIR: Content-Marketing-Automation
-      SSH_TARGET: ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}
-      SSH_PORT: ${{ secrets.VPS_PORT || '22' }}
     steps:
-      - uses: actions/checkout@v5
-
-      - name: Configure SSH
+      - name: Deploy to VPS over SSH
+        uses: appleboy/ssh-action@v1
         env:
-          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          # Pinned host key: refuses to connect if the server's identity changes.
-          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-          cat > ~/.ssh/config <<EOF
-          Host vps
-            HostName ${{ secrets.VPS_HOST }}
-            User ${{ secrets.VPS_USER }}
-            Port $SSH_PORT
-            IdentityFile ~/.ssh/deploy_key
-            IdentitiesOnly yes
-            StrictHostKeyChecking yes
-          EOF
+          # This repo is private, so the box can't fetch anonymously the way
+          # call-assistant's does. The job's own GITHUB_TOKEN (read-only, expires
+          # when the job ends) is used for this one fetch and never written to disk.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          envs: GH_TOKEN,REPO,SHA
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            APP_DIR="$HOME/Content-Marketing-Automation"
+            echo "==> Deploying $SHA to $(hostname):$APP_DIR"
 
-      - name: Ensure rsync on VPS
-        run: |
-          ssh vps 'bash -s' <<'EOF'
-          set -e
-          command -v rsync >/dev/null && exit 0
-          echo "Installing rsync"
-          if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo -n"; fi
-          $SUDO env DEBIAN_FRONTEND=noninteractive apt-get update -qq
-          $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq rsync
-          EOF
+            if ! command -v git >/dev/null; then
+              if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo -n"; fi
+              $SUDO env DEBIAN_FRONTEND=noninteractive apt-get update -qq
+              $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git
+            fi
 
-      - name: Sync code to VPS
-        run: |
-          echo "$GITHUB_SHA" > .deployed-sha
-          ssh vps "mkdir -p $APP_DIR"
-          # Runtime state on the server (.env, database, rendered files, venv, logs)
-          # is excluded, so --delete never touches it.
-          rsync -az --delete \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude '.env' \
-            --exclude '.venv/' \
-            --exclude 'data/' \
-            --exclude 'output/' \
-            --exclude 'logs/' \
-            --exclude '__pycache__/' \
-            --exclude '*.egg-info/' \
-            ./ "vps:$APP_DIR/"
+            mkdir -p "$APP_DIR" && cd "$APP_DIR"
+            if [ ! -d .git ]; then
+              git init -q -b main
+              git remote add origin "https://github.com/$REPO.git"
+            fi
 
-      - name: Install and restart on VPS
-        run: ssh vps "bash $APP_DIR/scripts/deploy_remote.sh"
+            # Git is the source of truth: force the checkout to exactly what was pushed.
+            # Untracked/ignored files (.env, data/, output/, .venv/, logs/) are kept.
+            git fetch -q "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" "$SHA"
+            git checkout -q -f -B main FETCH_HEAD
+
+            bash scripts/deploy_remote.sh

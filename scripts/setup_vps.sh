@@ -16,7 +16,7 @@ if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
 
 say "System packages"
 $SUDO apt-get update -qq
-$SUDO apt-get install -y -qq git curl rsync python3 python3-venv python3-pip >/dev/null
+$SUDO apt-get install -y -qq git curl python3 python3-venv python3-pip >/dev/null
 
 if ! python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))'; then
   echo "Python 3.11+ is required (found $(python3 --version)). Use Ubuntu 24.04+ or Debian 12+." >&2
