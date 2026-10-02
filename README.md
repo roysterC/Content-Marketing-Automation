@@ -75,39 +75,28 @@ It's safe to re-run. What it sets up:
 
 ### Automatic deploys from GitHub
 
-`.github/workflows/deploy.yml` runs the tests on every push and pull request. On a push to
-`main`, it then copies the code to the VPS with rsync, installs dependencies and restarts
-the bot. Your `.env`, database, rendered files and logs on the server are never touched.
-Everything else matches `main`, so edit config files such as `brand_voice.md` and
-`examples/` in the repo, not on the server.
+`.github/workflows/deploy.yml` works the same way as the call-assistant deploy. It runs
+the tests on every push and pull request. On a push to `main` it SSHes into the VPS with
+`appleboy/ssh-action`, checks out exactly the pushed commit in `~/Content-Marketing-Automation`,
+installs dependencies and restarts the bot.
 
-One-time setup:
+Git-ignored files on the server are never touched: `.env`, `data/`, `output/`, `.venv/` and
+`logs/`. Edit everything else in the repo, not on the server. That includes
+`config/brand_voice.md` and `config/examples/`; changes made on the server are lost at the
+next deploy.
 
-1. **Create a key just for deploys** on your own computer, so you aren't handing your
-   personal SSH key to GitHub:
-   ```bash
-   ssh-keygen -t ed25519 -f ~/.ssh/content_agent_deploy -N "" -C "github-deploy"
-   ssh-copy-id -i ~/.ssh/content_agent_deploy.pub YOUR_USER@YOUR_VPS_IP
-   ```
-2. **Get the server's fingerprint**, so GitHub can check it's talking to your real server:
-   ```bash
-   ssh-keyscan -p 22 YOUR_VPS_IP
-   ```
-3. **Add the repository secrets** under GitHub → Settings → Secrets and variables → Actions:
+Secrets (GitHub → Settings → Secrets and variables → Actions):
 
-   | Secret | Value |
-   |---|---|
-   | `VPS_HOST` | the server's IP address or hostname |
-   | `VPS_USER` | the SSH user, e.g. `root` |
-   | `VPS_SSH_KEY` | the entire contents of `~/.ssh/content_agent_deploy`, the private key |
-   | `VPS_KNOWN_HOSTS` | the full output of the `ssh-keyscan` command |
-   | `VPS_PORT` | optional; only needed if SSH isn't on port 22 |
+| Secret | Value |
+|---|---|
+| `VPS_HOST` | the server's IP address or hostname |
+| `VPS_USER` | the SSH user, e.g. `root` |
+| `VPS_SSH_KEY` | a private key whose public half is in the server's `~/.ssh/authorized_keys` |
+| `VPS_PORT` | optional; only needed if SSH isn't on port 22 |
 
-4. **Run `scripts/setup_vps.sh` once by hand** on the server, as shown above. Later deploys
-   only update and restart. If you deploy as a user other than root, that user needs
-   passwordless sudo for `systemctl restart content-agent-bot`.
-
-To redeploy without pushing, go to the Actions tab → **Test and deploy** → **Run workflow**.
+The first deploy runs `scripts/setup_vps.sh` automatically if `.venv` doesn't exist yet.
+That needs root, or passwordless sudo for the deploy user. To redeploy without pushing, go to
+Actions → **Test and deploy** → **Run workflow**.
 
 ## What to customise
 
