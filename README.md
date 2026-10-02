@@ -57,6 +57,19 @@ The fact-check results appear on each draft. Nothing is auto-rejected, so the fi
 
 ## Running it on a VPS
 
+SSH in from your own computer's terminal rather than the provider's web console, so that
+copy and paste work. Then run:
+
+```bash
+git clone -b claude/focused-goldberg-w0p7ka https://github.com/roysterc/content-marketing-automation.git ~/Content-Marketing-Automation
+cd ~/Content-Marketing-Automation && bash scripts/setup_vps.sh
+```
+
+The script installs everything (system packages, Claude Code, Python env, Chromium), creates
+`.env`, installs a systemd service for the Telegram bot and adds the weekday cron job.
+It finishes by printing the steps that need you: `claude setup-token` and the Telegram settings.
+It's safe to re-run. What it sets up:
+
 ```cron
 # Weekdays 07:00: research + drafts land in Telegram before the working day
 0 7 * * 1-5  cd /opt/content-agent && .venv/bin/content-agent run >> logs/run.log 2>&1
