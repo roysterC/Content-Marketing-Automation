@@ -80,9 +80,6 @@ the tests on every push and pull request. On a push to `main` it SSHes into the 
 `appleboy/ssh-action`, checks out exactly the pushed commit in `~/Content-Marketing-Automation`,
 installs dependencies and restarts the bot.
 
-The repo is private, so for that single fetch the server uses the workflow's own GitHub
-token. The token is read-only, expires when the job ends, and is never saved on the server.
-
 Git-ignored files on the server are never touched: `.env`, `data/`, `output/`, `.venv/` and
 `logs/`. Edit everything else in the repo, not on the server. That includes
 `config/brand_voice.md` and `config/examples/`; changes made on the server are lost at the

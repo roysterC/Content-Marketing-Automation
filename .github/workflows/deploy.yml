@@ -41,10 +41,6 @@ jobs:
       - name: Deploy to VPS over SSH
         uses: appleboy/ssh-action@v1
         env:
-          # This repo is private, so the box can't fetch anonymously the way
-          # call-assistant's does. The job's own GITHUB_TOKEN (read-only, expires
-          # when the job ends) is used for this one fetch and never written to disk.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.sha }}
         with:
@@ -52,7 +48,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
-          envs: GH_TOKEN,REPO,SHA
+          envs: REPO,SHA
           command_timeout: 20m
           script: |
             set -euo pipefail
@@ -73,7 +69,8 @@ jobs:
 
             # Git is the source of truth: force the checkout to exactly what was pushed.
             # Untracked/ignored files (.env, data/, output/, .venv/, logs/) are kept.
-            git fetch -q "https://x-access-token:$GH_TOKEN@github.com/$REPO.git" "$SHA"
+            git remote set-url origin "https://github.com/$REPO.git"
+            git fetch -q origin "$SHA"
             git checkout -q -f -B main FETCH_HEAD
 
             bash scripts/deploy_remote.sh
