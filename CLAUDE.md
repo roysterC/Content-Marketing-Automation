@@ -51,9 +51,11 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 3. **Phase 3:** lead magnet, landing page, email nurture, Facebook comment-to-DM.
 4. **Phase 4:** analytics feedback loop (once ~30 posts of data exist).
 
+## Decisions made
+- Approvals: **Telegram** (free, works well on a phone, simple bot API)
+- Orchestration: **Python service + cron** (code lives in `src/content_agent/`, see README)
+
 ## Open decisions
-- Slack vs Telegram for approvals
-- Python service vs n8n for orchestration
 - Which scheduler (Buffer / Publer / Metricool)
 - First lead magnet topic (candidate: "The 5 automations every salon should run to stop losing bookings to missed calls, with time saved for each")
 - Brand voice examples — Roy to supply
