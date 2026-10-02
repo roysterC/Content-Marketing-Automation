@@ -3,14 +3,15 @@
 ## Purpose
 Automate a social media presence (LinkedIn + Facebook) that wins **clients for Roy's AI automation services business**. This is a services/lead-gen account, NOT an audience-first account. Success = booked discovery calls from business owners, not follower count.
 
-- Primary target vertical: travel agencies (more verticals may be added later, e.g. trades)
+- Not restricted to one vertical. **Initial client focus:** appointment-based businesses that rely heavily on phone bookings — nail salons, hair salons/barbers, beauty clinics and similar (core pain: missed calls = missed bookings, staff tied up on the phone, no-shows).
+- Content scope is broader: any industry where automation delivers high value (e.g. travel agencies, trades, clinics, professional services) is fair game for posts.
 - Reader: busy small-business owner who cares about saved hours, missed leads and staff cost — not about AI itself
 - Owner: Roy, UK-based software engineer (comfortable with Python/TS, cost-conscious, prefers understanding the "why" behind design decisions)
 
 ## Content strategy
 - Lead with business problems; AI stays in the background. Plain language, no jargon ("RAG", "agentic").
 - Pillars (approx. mix):
-  - Workflow breakdowns: "how a travel agency could automate X" (~40%)
+  - Workflow breakdowns: "how a salon / [business type] could automate X" (~40%)
   - Proof: case studies, before/after numbers, screen recordings of automations running (~30%)
   - Industry problem posts tied to AI news only where it matters to SMBs (~20%)
   - Direct offer / lead magnet posts (~10%)
@@ -19,7 +20,7 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 - Facebook: shorter, more conversational variant. Never cross-post identical copy.
 
 ## Pipeline
-1. **Research** — ingest industry sources for target verticals (trade publications, subreddits, forums, RSS) plus relevant AI releases. LLM scores relevance to the target reader and dedupes. Store in DB.
+1. **Research** — ingest industry sources for the initial focus (salons / phone-booking businesses) and other high-value automation industries (trade publications, subreddits, forums, RSS) plus relevant AI releases. LLM scores relevance to the target reader and dedupes. Store in DB.
 2. **Draft** — Claude writes per-platform drafts using a brand-voice file + 10–20 example posts.
 3. **Visuals** — primarily HTML templates rendered to PNG/PDF via Playwright (branded, consistent carousels/diagrams). Image model only for occasional hero images.
 4. **Human review gate** — drafts sent to Slack or Telegram with Approve / Edit / Reject. Nothing publishes without approval.
@@ -54,5 +55,5 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 - Slack vs Telegram for approvals
 - Python service vs n8n for orchestration
 - Which scheduler (Buffer / Publer / Metricool)
-- First lead magnet topic (candidate: "The 5 automations every travel agency should run, with time saved for each")
+- First lead magnet topic (candidate: "The 5 automations every salon should run to stop losing bookings to missed calls, with time saved for each")
 - Brand voice examples — Roy to supply
