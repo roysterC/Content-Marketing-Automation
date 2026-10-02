@@ -22,7 +22,11 @@ cp .env.example .env                         # then fill it in
 
 Claude access: by default this uses your Claude Pro or Max plan through the
 [Claude Code](https://code.claude.com) CLI. You don't need an API key.
-1. Install Claude Code (`npm install -g @anthropic-ai/claude-code`, or see the docs).
+1. Install Claude Code, then open a new terminal and check that `claude --version` works:
+   - macOS, Linux, WSL: `curl -fsSL https://claude.ai/install.sh | bash`
+   - Windows PowerShell: `irm https://claude.ai/install.ps1 | iex`
+   - If you get `claude: command not found`, add `~/.local/bin` to your PATH:
+     `echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc`
 2. On your own machine, run `claude` once and log in.
    On a VPS with no browser, run `claude setup-token` on any machine. It prints a token
    that lasts one year. Put it in `.env` as `CLAUDE_CODE_OAUTH_TOKEN=...`.
