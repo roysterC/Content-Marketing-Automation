@@ -46,10 +46,14 @@ Telegram bot setup:
 | `content-agent score` | Claude scores each new item 0–10 for your target reader and suggests an angle |
 | `content-agent draft --limit 3` | Draft LinkedIn, Facebook and carousel versions of the top ideas, then fact-check them |
 | `content-agent brief notes.txt --pillar proof` | Draft a post from your own notes (case studies, offers). Only facts in your notes are used |
+| `content-agent idea --sector "nail salons"` | Claude comes up with an automation idea for that business type, or a random one from `config/idea_sectors.yaml`. It checks the idea with web searches, writes the posts, renders an infographic PNG and a carousel, and sends them to Telegram |
 | `content-agent render` | Render the carousel PDFs (LinkedIn document posts) and cover PNGs into `output/` |
 | `content-agent review` | Send pending drafts to Telegram with Approve / Edit / Reject buttons |
 | `content-agent bot` | Long-running process that handles the button presses and edits (`/pending` resends drafts) |
 | `content-agent run` | ingest → score → draft → render → review in one go |
+
+From your phone, send `/idea` or `/idea dog groomers` to the bot to get a fresh idea in a
+few minutes. The bot keeps handling your buttons while it works.
 
 How approval works: **Approve** marks the draft as ready to post. **Reject** discards it.
 **Edit** asks you to reply with the new text, then sends the updated draft back for approval.
