@@ -65,6 +65,19 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 3. **Phase 3:** lead magnet, landing page, email nurture, Facebook comment-to-DM.
 4. **Phase 4:** analytics feedback loop (once ~30 posts of data exist).
 
+## Status (update as phases progress)
+- **Phase 1: built and running on the VPS.** Research ingest + scoring, drafting with
+  fact-check, `brief` (Roy's notes), `idea` (Claude's own web-checked ideas), `team`
+  (AI-team org chart), infographic-first carousels with a text-fit check, Telegram approval
+  (`/idea`, `/team`, `/pending`), weekday 07:00 cron, auto-deploy from `main` via GitHub
+  Actions. Still open: Roy's example posts and brand-voice edits; SQLite (not Postgres) is
+  fine for now.
+- **Phase 2: not started.** Blocked on choosing the scheduler.
+- **Phase 3: not started.**
+- **Phase 4: not started.** Needs ~30 published posts.
+- Content quality is improved iteratively alongside every phase (prompts, templates,
+  examples, feedback from Roy's edits and rejections).
+
 ## Decisions made
 - Approvals: **Telegram** (free, works well on a phone, simple bot API)
 - Orchestration: **Python service + cron** (code lives in `src/content_agent/`, see README)
