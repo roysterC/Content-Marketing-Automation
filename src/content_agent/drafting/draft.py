@@ -9,11 +9,13 @@ from content_agent.config import CONFIG_DIR, get_settings
 from content_agent.db import Draft, Item, session
 from content_agent.drafting.factcheck import factcheck
 from content_agent.llm import ask_json
-from content_agent.prompts import AUDIENCE, STYLE_RULES
+from content_agent.prompts import AUDIENCE, DESIGN_RULES, STYLE_RULES
+from content_agent.visuals.icons import ICON_NAMES
 
 log = logging.getLogger(__name__)
 
 PILLARS = ("workflow", "proof", "industry", "offer")
+LAYOUTS = ("cover", "steps", "stats", "compare", "checklist", "grid", "insight", "cta")
 
 SCHEMA = {
     "type": "object",
@@ -42,10 +44,42 @@ SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
+                    "layout": {"type": "string", "enum": list(LAYOUTS)},
+                    "kicker": {"type": "string"},
                     "title": {"type": "string"},
                     "body": {"type": "string"},
+                    "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
+                    "points": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
+                                "title": {"type": "string"},
+                                "detail": {"type": "string"},
+                                "value": {"type": "string"},
+                            },
+                            "required": ["icon", "title", "detail", "value"],
+                            "additionalProperties": False,
+                        },
+                    },
+                    "before_label": {"type": "string"},
+                    "after_label": {"type": "string"},
+                    "before": {"type": "array", "items": {"type": "string"}},
+                    "after": {"type": "array", "items": {"type": "string"}},
                 },
-                "required": ["title", "body"],
+                "required": [
+                    "layout",
+                    "kicker",
+                    "title",
+                    "body",
+                    "icon",
+                    "points",
+                    "before_label",
+                    "after_label",
+                    "before",
+                    "after",
+                ],
                 "additionalProperties": False,
             },
         },
@@ -89,9 +123,9 @@ Output, for one idea:
   No URLs in the body. `first_comment` holds the source link or other links, or "" if none.
 - facebook: a shorter, more conversational variant with different wording. `body` includes
   the hook. Never copy the LinkedIn text.
-- carousel: 5-8 slides for a LinkedIn PDF carousel. Slide 1 is the hook; the last slide is
-  the call to action. Each slide: a short title (max ~8 words) and body (max ~35 words).
-"""
+- carousel: 6-8 slides for a LinkedIn PDF carousel, designed as infographics:
+
+{DESIGN_RULES.format(icons=", ".join(ICON_NAMES))}"""
 
 
 def _prompt_for_item(item: Item, pillar: str) -> str:

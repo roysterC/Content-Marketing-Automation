@@ -20,6 +20,7 @@ from content_agent.drafting.draft import _save, _system_prompt
 from content_agent.drafting.factcheck import factcheck
 from content_agent.llm import ask_json
 from content_agent.research.fetch import title_hash
+from content_agent.visuals.icons import ICON_NAMES
 from content_agent.visuals.render import render_carousel, render_idea_html, render_png
 
 log = logging.getLogger(__name__)
@@ -46,10 +47,11 @@ INFOGRAPHIC = {
             "items": {
                 "type": "object",
                 "properties": {
+                    "icon": {"type": "string", "enum": ICON_NAMES},
                     "title": _str("Max ~5 words"),
                     "detail": _str("One plain sentence, max ~14 words"),
                 },
-                "required": ["title", "detail"],
+                "required": ["icon", "title", "detail"],
                 "additionalProperties": False,
             },
         },
@@ -59,10 +61,11 @@ INFOGRAPHIC = {
             "items": {
                 "type": "object",
                 "properties": {
+                    "icon": {"type": "string", "enum": ICON_NAMES},
                     "value": _str("Max ~7 characters"),
                     "label": _str("Max ~6 words"),
                 },
-                "required": ["value", "label"],
+                "required": ["icon", "value", "label"],
                 "additionalProperties": False,
             },
         },

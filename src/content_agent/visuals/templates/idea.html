@@ -59,6 +59,12 @@
     background: var(--accent); color: var(--bg); font-weight: 800; font-size: 1.5rem;
     box-shadow: 0 0 0 0.45rem var(--accent-soft);
   }
+  .num { position: relative; }
+  .num .icon { width: 1.8rem; height: 1.8rem; }
+  .num b { position: absolute; top: -0.35rem; right: -0.35rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 0.85rem; display: grid; place-items: center; }
+  .stat-icon { display: inline-grid; place-items: center; width: 2.6rem; height: 2.6rem; border-radius: 0.8rem; background: var(--accent-soft); color: var(--accent); margin-bottom: 0.7rem; }
+  .stat-icon .icon { width: 1.4rem; height: 1.4rem; }
+  .icon { display: block; }
   .step-card { background: var(--card); border: 1px solid var(--card-border); border-radius: 1.1rem; padding: 1rem 1.4rem; }
   .step-title { font-size: 1.65rem; font-weight: 600; line-height: 1.25; }
   .step-text { font-size: 1.35rem; line-height: 1.4; color: var(--muted); margin-top: 0.25rem; }
@@ -85,7 +91,7 @@
       <div class="flow">
         {% for step in idea.steps %}
         <div class="step">
-          <div class="num">{{ loop.index }}</div>
+          <div class="num">{% if step.icon %}{{ icon(step.icon, "icon") }}<b>{{ loop.index }}</b>{% else %}{{ loop.index }}{% endif %}</div>
           <div class="step-card">
             <div class="step-title">{{ step.title }}</div>
             <div class="step-text">{{ step.detail }}</div>
@@ -99,6 +105,7 @@
       <div class="impact" style="--cols: {{ idea.impact | length }}">
         {% for s in idea.impact %}
         <div class="stat">
+          {% if s.icon %}<span class="stat-icon">{{ icon(s.icon) }}</span>{% endif %}
           <div class="stat-value">{{ s.value }}</div>
           <div class="stat-label">{{ s.label }}</div>
         </div>

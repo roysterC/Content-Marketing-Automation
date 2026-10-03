@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from content_agent.config import OUTPUT_DIR, get_settings
 from content_agent.db import Draft, session
+from content_agent.visuals.icons import icon
 
 log = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ AUTHOR = "Roy"
 TAGLINE = "Automation for busy small businesses"
 
 _env = Environment(loader=FileSystemLoader(TEMPLATES), autoescape=select_autoescape(["html"]))
+_env.globals["icon"] = icon
 
 
 def render_html(slides: list[dict], template: str = "carousel.html") -> str:
@@ -55,6 +57,7 @@ def render_carousel(slides: list[dict], out_stem: Path) -> Path:
         browser = p.chromium.launch(executable_path=get_settings().chromium_path or None)
         page = browser.new_page(viewport={"width": SLIDE_W, "height": SLIDE_H})
         page.set_content(html, wait_until="networkidle")
+        page.wait_for_selector("body[data-ready]", state="attached", timeout=15000)
         page.screenshot(path=str(out_stem.parent / f"{out_stem.name}-cover.png"))
         page.pdf(
             path=str(pdf_path),

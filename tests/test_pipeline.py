@@ -21,16 +21,46 @@ def test_clean_text_strips_html():
     assert clean_text("<p>Hello &amp; <b>welcome</b></p>") == "Hello & welcome"
 
 
-def test_carousel_html_has_one_section_per_slide_and_escapes():
+def _slide(layout, **kw):
+    base = {
+        "layout": layout,
+        "kicker": "",
+        "title": f"{layout} title",
+        "body": "",
+        "icon": "",
+        "points": [],
+        "before_label": "",
+        "after_label": "",
+        "before": [],
+        "after": [],
+    }
+    return {**base, **kw}
+
+
+def test_carousel_renders_every_layout_with_icons_and_escapes():
+    point = {"icon": "phone", "title": "Point", "detail": "<script>x</script>", "value": "24/7"}
     slides = [
-        {"title": "Missed calls = missed bookings", "body": "Hook"},
-        {"title": "Step 1", "body": "<script>x</script>"},
-        {"title": "Want this?", "body": "DM me"},
+        _slide("cover", kicker="Salon owners", icon="missed-call"),
+        _slide("steps", points=[point] * 3),
+        _slide("stats", points=[point] * 2),
+        _slide("compare", before=["a", "b"], after=["c", "d"]),
+        _slide("checklist", points=[point] * 3),
+        _slide("grid", points=[point] * 4),
+        _slide("insight"),
+        _slide("cta", kicker='DM me "CALLS"', icon="message"),
     ]
     html = render_html(slides)
-    assert html.count('<section class="slide') == 3
+    assert html.count('<section class="slide') == 8
+    for layout in ("cover", "steps", "stats", "compare", "checklist", "grid", "insight", "cta"):
+        assert f"layout-{layout}" in html
+    assert html.count('class="step"') == 3
+    assert "<svg" in html
     assert "<script>x</script>" not in html
-    assert "Swipe" in html
+
+
+def test_carousel_still_renders_old_title_body_slides():
+    html = render_html([{"title": "Old slide", "body": "Saved before layouts existed"}])
+    assert "layout-text" in html and "Old slide" in html
 
 
 def test_format_draft_flags_factcheck_issues():
@@ -80,3 +110,13 @@ def test_format_draft_labels_claude_ideas():
     item = Item(url="idea:abc", title="t", source="Claude idea", business_type="barbers")
     d = Draft(id=3, platform="facebook", pillar="workflow", hook="h", body="b", item=item)
     assert "Claude's own idea (barbers)" in format_draft(d)
+
+
+def test_schema_and_prompt_share_the_icon_set():
+    from content_agent.drafting.draft import SCHEMA, _system_prompt
+    from content_agent.visuals.icons import ICON_NAMES, icon
+
+    slide = SCHEMA["properties"]["carousel"]["items"]
+    assert set(slide["properties"]["icon"]["enum"]) == {"", *ICON_NAMES}
+    assert "infographic first" in _system_prompt()
+    assert "<svg" in icon("not-an-icon")  # unknown names fall back, never crash
