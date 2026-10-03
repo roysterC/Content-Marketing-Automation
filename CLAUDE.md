@@ -29,6 +29,20 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 7. **Lead funnel** — lead magnet → landing page w/ email capture → short nurture sequence → Cal.com booking → CRM.
 8. **Analytics** — weekly metric pull, tag posts by pillar/hook/format, feed top performers back into drafting prompts.
 
+## Design standard (applies to every visual)
+- Every design must look **professional and visually pleasing**: infographic first, never a
+  wall of text. Think diagrams, numbered flows, big-number stats, before/after comparisons,
+  icon card grids and checklists, not title-plus-paragraph slides.
+- One consistent brand system across all visuals: the shared colour tokens, Inter, the line
+  icons in `src/content_agent/visuals/icons.py`, generous spacing, and the author footer.
+- Carousels use the layout system in `visuals/templates/carousel.html` (cover, steps,
+  stats, compare, checklist, grid, insight, cta). The cover comes first and the CTA last,
+  every slide in between is a visual layout, at least three different layouts per carousel,
+  and at most one text-led "insight" slide.
+- Text must fit its space. Templates shrink text to fit; keep copy within the word limits in
+  `prompts.py` (`DESIGN_RULES`).
+- Any new template must meet the same bar. Render it and check it before it ships.
+
 ## Hard constraints
 - **No automated LinkedIn actions** beyond posting (no auto DMs, connection requests, comments, likes) — ToS violation, ban risk.
 - Facebook Messenger automation must stay within Meta messaging policy.

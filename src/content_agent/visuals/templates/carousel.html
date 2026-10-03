@@ -4,76 +4,255 @@
 <meta charset="utf-8">
 <title>Carousel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  /* Brand tokens - change these to restyle every carousel. */
+  /* Brand tokens - shared with idea.html. Change these to restyle every slide. */
   :root {
     --bg: #0f1b2d;
-    --bg-accent: #16263f;
+    --bg-2: #16263f;
+    --card: rgba(255, 255, 255, 0.055);
+    --card-strong: rgba(255, 255, 255, 0.09);
+    --border: rgba(255, 255, 255, 0.11);
     --text: #f4f1ea;
     --muted: #a9b4c6;
     --accent: #f2a541;
-    --slide-w: 1080px;
-    --slide-h: 1350px;
+    --accent-soft: rgba(242, 165, 65, 0.15);
+    --good: #7fd1ae;
+    --good-soft: rgba(127, 209, 174, 0.14);
+    --bad: #ef8a80;
+    --bad-soft: rgba(239, 138, 128, 0.13);
   }
   @page { size: 1080px 1350px; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: var(--bg); }
   body { font-family: "Inter", system-ui, sans-serif; color: var(--text); }
 
+  /* Every size inside a slide is in em, so the fit script can shrink one slide evenly. */
   .slide {
-    width: var(--slide-w);
-    height: var(--slide-h);
-    padding: 110px 96px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 48px;
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(160deg, var(--bg) 60%, var(--bg-accent));
-    page-break-after: always;
-    break-after: page;
+    width: 1080px; height: 1350px; position: relative; overflow: hidden;
+    font-size: 16px; padding: 7.5em 5.25em 7.5em;
+    display: flex; flex-direction: column; justify-content: center; gap: 2.4em;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0) 0 0 / 2.4em 2.4em,
+      radial-gradient(60em 40em at 100% 0%, rgba(242,165,65,0.13), transparent 60%),
+      radial-gradient(50em 35em at 0% 100%, rgba(127,209,174,0.08), transparent 60%),
+      linear-gradient(160deg, var(--bg) 55%, var(--bg-2));
+    break-after: page; page-break-after: always;
   }
-  .slide:last-child { page-break-after: auto; break-after: auto; }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
 
-  .num {
-    position: absolute; top: 80px; left: 96px;
-    font-size: 30px; font-weight: 600; color: var(--accent); letter-spacing: 2px;
-  }
-  h1 { font-size: 84px; line-height: 1.08; font-weight: 800; }
-  h2 { font-size: 66px; line-height: 1.12; font-weight: 800; }
-  p { font-size: 40px; line-height: 1.45; color: var(--muted); white-space: pre-line; }
-  .bar { width: 120px; height: 10px; background: var(--accent); border-radius: 5px; }
-
+  /* Chrome: progress bar, counter, footer */
+  .progress { position: absolute; top: 3.4em; left: 5.25em; right: 5.25em; display: flex; gap: 0.5em; }
+  .progress span { flex: 1; height: 0.35em; border-radius: 1em; background: rgba(255,255,255,0.12); }
+  .progress span.on { background: var(--accent); }
+  .counter { position: absolute; top: 4.6em; right: 5.25em; font-size: 1.35em; font-weight: 600; color: var(--muted); }
   .footer {
-    position: absolute; bottom: 72px; left: 96px; right: 96px;
+    position: absolute; bottom: 3.6em; left: 5.25em; right: 5.25em;
     display: flex; justify-content: space-between; align-items: center;
-    font-size: 28px; color: var(--muted);
+    font-size: 1.5em; color: var(--muted);
   }
-  .footer strong { color: var(--text); font-weight: 600; }
-  .swipe { color: var(--accent); font-weight: 600; }
+  .footer strong { color: var(--text); }
+  .swipe { display: flex; align-items: center; gap: 0.4em; color: var(--accent); font-weight: 600; }
 
-  .cover h1 { font-size: 96px; }
-  .cta { background: var(--accent); color: var(--bg); }
-  .cta p, .cta .footer, .cta .num { color: var(--bg); }
-  .cta .bar { background: var(--bg); }
-  .cta .footer strong { color: var(--bg); }
+  /* Shared pieces */
+  .icon { width: 1em; height: 1em; display: block; }
+  .badge {
+    width: 3.6em; height: 3.6em; border-radius: 1em; flex: none;
+    display: grid; place-items: center; font-size: 1em;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .badge .icon { width: 1.9em; height: 1.9em; }
+  .kicker { display: flex; align-items: center; gap: 1em; font-size: 1.5em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+  .kicker .badge { font-size: 0.7em; }
+  h1 { font-size: 6.2em; line-height: 1.04; font-weight: 800; letter-spacing: -0.025em; }
+  h2 { font-size: 4.3em; line-height: 1.08; font-weight: 800; letter-spacing: -0.02em; }
+  .lead { font-size: 2.2em; line-height: 1.45; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 1.4em; }
+  .accent-word { color: var(--accent); }
+
+  /* cover */
+  .layout-cover h1 { font-size: 6.8em; }
+  .layout-cover .ghost { position: absolute; right: -3em; bottom: 6em; width: 34em; height: 34em; color: rgba(242,165,65,0.07); }
+  .layout-cover .ghost .icon { width: 100%; height: 100%; }
+  .layout-cover .rule { width: 9em; height: 0.6em; border-radius: 1em; background: var(--accent); }
+
+  /* steps: numbered flow with icons and a connector */
+  .steps { display: flex; flex-direction: column; gap: 1.3em; }
+  .step { display: grid; grid-template-columns: 5.4em 1fr; gap: 1.6em; align-items: center; position: relative; }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; left: 2.6em; top: 5.4em; height: 1.3em; width: 0.2em;
+    background: linear-gradient(var(--accent), rgba(242,165,65,0.2));
+  }
+  .step .n {
+    width: 5.4em; height: 5.4em; border-radius: 50%; position: relative;
+    display: grid; place-items: center; background: var(--accent); color: var(--bg);
+    box-shadow: 0 0 0 0.6em var(--accent-soft);
+  }
+  .step .n .icon { width: 2.4em; height: 2.4em; }
+  .step .n b { position: absolute; top: -0.4em; right: -0.4em; width: 2.1em; height: 2.1em; border-radius: 50%; background: var(--text); color: var(--bg); font-size: 1em; display: grid; place-items: center; font-weight: 800; }
+  .step .card { padding: 1.4em 1.8em; }
+  .t { font-size: 2.05em; font-weight: 700; line-height: 1.22; }
+  .d { font-size: 1.65em; line-height: 1.4; color: var(--muted); margin-top: 0.25em; }
+
+  /* stats: big numbers */
+  .stats { display: grid; gap: 1.4em; grid-template-columns: repeat(2, 1fr); }
+  .stats.n1 { grid-template-columns: 1fr; }
+  .stats.n3 .stat:first-child { grid-column: span 2; }
+  .stat { padding: 2em 2.1em; display: flex; flex-direction: column; gap: 0.9em; }
+  .stat .badge, .grid .badge { font-size: 1.3em; }
+  .stat .v { font-size: 5.6em; font-weight: 800; line-height: 1; color: var(--good); letter-spacing: -0.02em; }
+  .stat .t { font-size: 1.95em; }
+  .note { font-size: 1.35em; color: var(--muted); opacity: 0.85; }
+
+  /* compare: before / after */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4em; }
+  .col { padding: 2em 1.9em; display: flex; flex-direction: column; gap: 1.2em; }
+  .col.before { background: var(--bad-soft); border-color: rgba(239,138,128,0.25); }
+  .col.after { background: var(--good-soft); border-color: rgba(127,209,174,0.28); }
+  .col h3 { font-size: 1.6em; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 800; }
+  .col.before h3 { color: var(--bad); }
+  .col.after h3 { color: var(--good); }
+  .li { display: grid; grid-template-columns: 2.2em 1fr; gap: 0.9em; align-items: start; font-size: 1.75em; line-height: 1.35; }
+  .li .mark { width: 2.2em; height: 2.2em; border-radius: 50%; display: grid; place-items: center; font-size: 0.6em; }
+  .li .mark .icon { width: 1.9em; height: 1.9em; }
+  .before .mark { background: rgba(239,138,128,0.22); color: var(--bad); }
+  .after .mark { background: rgba(127,209,174,0.22); color: var(--good); }
+
+  /* checklist */
+  .checklist { display: flex; flex-direction: column; gap: 1.1em; }
+  .check { display: grid; grid-template-columns: 3.4em 1fr; gap: 1.4em; align-items: center; padding: 1.4em 1.7em; }
+  .check .tick { width: 3.4em; height: 3.4em; border-radius: 50%; background: var(--good); color: var(--bg); display: grid; place-items: center; }
+  .check .tick .icon { width: 1.9em; height: 1.9em; }
+
+  /* grid: icon cards (org-chart style) */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.3em; }
+  .grid .card { padding: 1.9em 1.8em; display: flex; flex-direction: column; gap: 1em; }
+  .grid .tag { font-size: 1.45em; font-weight: 700; color: var(--accent); }
+
+  /* insight: one big statement */
+  .layout-insight .quote { width: 7em; height: 7em; border-radius: 2em; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+  .layout-insight .quote .icon { width: 3.6em; height: 3.6em; }
+  .layout-insight h2 { font-size: 5.2em; }
+
+  /* cta */
+  .layout-cta { background: linear-gradient(160deg, #f6b65a, var(--accent) 60%, #e48f2a); color: var(--bg); }
+  .layout-cta .lead, .layout-cta .footer, .layout-cta .counter { color: rgba(15,27,45,0.78); }
+  .layout-cta .footer strong { color: var(--bg); }
+  .layout-cta .progress span { background: rgba(15,27,45,0.18); }
+  .layout-cta .progress span.on { background: var(--bg); }
+  .layout-cta .big-badge { width: 8em; height: 8em; border-radius: 2.2em; display: grid; place-items: center; background: var(--bg); color: var(--accent); }
+  .layout-cta .big-badge .icon { width: 4em; height: 4em; }
+  .layout-cta .action { align-self: flex-start; font-size: 2.1em; font-weight: 800; background: var(--bg); color: var(--accent); padding: 0.75em 1.3em; border-radius: 0.8em; }
 </style>
 </head>
 <body>
 {% for slide in slides %}
-  {% set first = loop.first %}{% set last = loop.last %}
-  <section class="slide{% if first %} cover{% elif last %} cta{% endif %}">
-    {% if not first %}<div class="num">{{ "%02d" % loop.index }} / {{ "%02d" % loop.length }}</div>{% endif %}
-    <div class="bar"></div>
-    {% if first %}<h1>{{ slide.title }}</h1>{% else %}<h2>{{ slide.title }}</h2>{% endif %}
-    {% if slide.body %}<p>{{ slide.body }}</p>{% endif %}
-    <div class="footer">
-      <span><strong>{{ author }}</strong> · {{ tagline }}</span>
-      {% if not last %}<span class="swipe">Swipe →</span>{% endif %}
+{% set layout = slide.layout | default('text') %}
+{% set total = loop.length %}{% set idx = loop.index %}
+<section class="slide layout-{{ layout }}">
+  <div class="progress">{% for i in range(total) %}<span class="{{ 'on' if i < idx }}"></span>{% endfor %}</div>
+  {% if layout != 'cover' %}<div class="counter">{{ "%02d" % idx }} / {{ "%02d" % total }}</div>{% endif %}
+
+  {% if layout == 'cover' %}
+    <div class="ghost">{{ icon(slide.icon) }}</div>
+    {% if slide.kicker %}<div class="kicker"><span class="badge">{{ icon(slide.icon) }}</span>{{ slide.kicker }}</div>{% endif %}
+    <h1>{{ slide.title }}</h1>
+    <div class="rule"></div>
+    {% if slide.body %}<p class="lead">{{ slide.body }}</p>{% endif %}
+
+  {% elif layout == 'steps' %}
+    <h2>{{ slide.title }}</h2>
+    <div class="steps">
+      {% for p in slide.points %}
+      <div class="step">
+        <div class="n">{{ icon(p.icon) }}<b>{{ loop.index }}</b></div>
+        <div class="card"><div class="t">{{ p.title }}</div>{% if p.detail %}<div class="d">{{ p.detail }}</div>{% endif %}</div>
+      </div>
+      {% endfor %}
     </div>
-  </section>
+
+  {% elif layout == 'stats' %}
+    <h2>{{ slide.title }}</h2>
+    <div class="stats n{{ slide.points | length }}">
+      {% for p in slide.points %}
+      <div class="stat card">
+        <span class="badge">{{ icon(p.icon) }}</span>
+        <div class="v">{{ p.value }}</div>
+        <div class="t">{{ p.title }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if slide.body %}<p class="note">{{ slide.body }}</p>{% endif %}
+
+  {% elif layout == 'compare' %}
+    <h2>{{ slide.title }}</h2>
+    <div class="compare">
+      <div class="col before card">
+        <h3>{{ slide.before_label or 'Today' }}</h3>
+        {% for x in slide.before %}<div class="li"><span class="mark">{{ icon('cross') }}</span><span>{{ x }}</span></div>{% endfor %}
+      </div>
+      <div class="col after card">
+        <h3>{{ slide.after_label or 'Automated' }}</h3>
+        {% for x in slide.after %}<div class="li"><span class="mark">{{ icon('check') }}</span><span>{{ x }}</span></div>{% endfor %}
+      </div>
+    </div>
+
+  {% elif layout == 'checklist' %}
+    <h2>{{ slide.title }}</h2>
+    <div class="checklist">
+      {% for p in slide.points %}
+      <div class="check card">
+        <span class="tick">{{ icon('check') }}</span>
+        <div><div class="t">{{ p.title }}</div>{% if p.detail %}<div class="d">{{ p.detail }}</div>{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+  {% elif layout == 'grid' %}
+    <h2>{{ slide.title }}</h2>
+    <div class="grid">
+      {% for p in slide.points %}
+      <div class="card">
+        <span class="badge">{{ icon(p.icon) }}</span>
+        <div class="t">{{ p.title }}</div>
+        {% if p.value %}<div class="tag">{{ p.value }}</div>{% endif %}
+        {% if p.detail %}<div class="d">{{ p.detail }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+  {% elif layout == 'cta' %}
+    <div class="big-badge">{{ icon(slide.icon or 'message') }}</div>
+    <h2>{{ slide.title }}</h2>
+    {% if slide.body %}<p class="lead">{{ slide.body }}</p>{% endif %}
+    {% if slide.kicker %}<div class="action">{{ slide.kicker }}</div>{% endif %}
+
+  {% else %}{# insight, and slides saved before layouts existed #}
+    <div class="quote">{{ icon(slide.icon or 'lightbulb') }}</div>
+    <h2>{{ slide.title }}</h2>
+    {% if slide.body %}<p class="lead">{{ slide.body }}</p>{% endif %}
+  {% endif %}
+
+  <div class="footer">
+    <span><strong>{{ author }}</strong> · {{ tagline }}</span>
+    {% if not loop.last %}<span class="swipe">Swipe {{ icon('arrow-right') }}</span>{% endif %}
+  </div>
+</section>
 {% endfor %}
+<script>
+  // Shrink any slide whose content overflows, evenly (all sizes are em). Runs after
+  // web fonts load; the renderer waits for data-ready before printing.
+  function fit() {
+    document.querySelectorAll(".slide").forEach((s) => {
+      let size = 16;
+      s.style.fontSize = size + "px";
+      while (s.scrollHeight > s.clientHeight && size > 10) {
+        size -= 0.5;
+        s.style.fontSize = size + "px";
+      }
+    });
+  }
+  document.fonts.ready.then(fit).finally(() => { document.body.dataset.ready = "1"; });
+</script>
 </body>
 </html>

@@ -33,3 +33,28 @@ STYLE_RULES = """\
 - Every post is a sales asset: end with a low-friction call to action.
 - UK English spelling.
 """
+
+DESIGN_RULES = """\
+Every visual must look professional and visually pleasing: infographic first, never a
+wall of text. Each carousel slide picks a `layout`:
+- cover: the hook. `title` = hook (max ~9 words), `body` = one-line subhead, `kicker` =
+  short audience label (e.g. "Salon owners"), `icon` = the main theme.
+- steps: a numbered flow. 3-5 `points`, each with `icon`, `title` (max ~5 words) and
+  `detail` (max ~12 words).
+- stats: big numbers. 2-4 `points` with `value` (max ~7 characters, e.g. "~2 hrs",
+  "24/7", "0"), `title` (max ~6 words) and `icon`. Put the "illustrative estimates" note in
+  `body` unless the numbers came from Roy or a cited source.
+- compare: before vs after. `before` and `after` lists of 3-4 items (max ~7 words each);
+  `before_label` / `after_label` default to "Today" / "Automated".
+- checklist: 3-5 `points` with `title` and an optional short `detail`.
+- grid: 4 or 6 icon cards. Each point has `icon`, `title` (a role or job, 1-3 words),
+  `value` (a short tagline) and `detail` (max ~10 words). Good for "your AI front desk
+  team" style overviews.
+- insight: one big statement (`title`, max ~12 words) plus an optional `body` line. At
+  most one per carousel.
+- cta: the last slide. `title` = the ask, `body` = what they get, `kicker` = the exact
+  action (e.g. 'DM me "CALLS"'), `icon`.
+Slide 1 is always cover and the last slide is always cta. Every slide in between should
+be steps, stats, compare, checklist or grid; use at least three different layouts.
+Choose `icon` names only from: {icons}. Use "" for unused text fields and [] for unused lists.
+"""
