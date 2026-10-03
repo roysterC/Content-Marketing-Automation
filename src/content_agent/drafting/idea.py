@@ -18,10 +18,11 @@ from content_agent.db import Item, session
 from content_agent.drafting.draft import SCHEMA as DRAFT_SCHEMA
 from content_agent.drafting.draft import _save, _system_prompt
 from content_agent.drafting.factcheck import factcheck
+from content_agent.drafting.fit import render_carousel_fitted, render_poster_fitted
 from content_agent.llm import ask_json
 from content_agent.research.fetch import title_hash
 from content_agent.visuals.icons import ICON_NAMES
-from content_agent.visuals.render import render_carousel, render_idea_html, render_png
+from content_agent.visuals.render import poster_path, render_idea_html
 
 log = logging.getLogger(__name__)
 
@@ -134,8 +135,46 @@ def _recent_ideas(db) -> list[Item]:
     )
 
 
-def idea_image_path(draft_id: int):
-    return OUTPUT_DIR / "ideas" / f"draft-{draft_id}.png"
+def store_visual_post(
+    db,
+    *,
+    result: dict,
+    checks: dict,
+    sector: str,
+    title: str,
+    source: str,
+    kind: str,
+    poster_key: str,
+    poster_schema: dict,
+    make_html,
+) -> list[int]:
+    """Save a Claude-written post (as an Item plus LinkedIn/Facebook drafts), then render
+    its single-image visual and carousel with the text-fit check. Returns draft ids."""
+    item = Item(
+        url=f"{kind}:{uuid.uuid4()}",
+        title=title[:500],
+        title_hash=title_hash(f"{kind} {title}"),
+        summary=result["research_notes"][:2000],
+        source=source,
+        category=kind,
+        business_type=sector,
+        pillar="workflow",
+        status="drafted",
+    )
+    db.add(item)
+    drafts = _save(db, result, "workflow", item, checks)
+    db.flush()
+
+    linkedin = drafts[0]
+    render_poster_fitted(
+        make_html, result[poster_key], poster_schema, poster_path(linkedin.id), poster_key
+    )
+    path, linkedin.carousel = render_carousel_fitted(
+        result["carousel"], OUTPUT_DIR / "carousels" / f"draft-{linkedin.id}"
+    )
+    linkedin.carousel_path = str(path)
+    db.commit()
+    return [d.id for d in drafts]
 
 
 def generate_idea(sector: str | None = None) -> list[int]:
@@ -146,13 +185,13 @@ def generate_idea(sector: str | None = None) -> list[int]:
         recent_list = (
             "\n".join(f"  - {i.title} ({i.business_type})" for i in recent) or "  (none yet)"
         )
-        prompt = IDEA_TASK.format(
-            sector=sector,
-            recent=recent_list,
-        )
         log.info("Generating idea for %s", sector)
         result = ask_json(
-            system=_system_prompt(), prompt=prompt, schema=SCHEMA, effort="high", web=True
+            system=_system_prompt(),
+            prompt=IDEA_TASK.format(sector=sector, recent=recent_list),
+            schema=SCHEMA,
+            effort="high",
+            web=True,
         )
         checks = factcheck(
             {k: result[k] for k in ("linkedin", "facebook", "carousel", "infographic")},
@@ -160,28 +199,18 @@ def generate_idea(sector: str | None = None) -> list[int]:
             "Treat clearly-labelled illustrative estimates as fine; flag anything stated "
             "as fact that isn't backed by these research notes:\n\n" + result["research_notes"],
         )
-
         title = result["infographic"]["title"]
-        item = Item(
-            url=f"idea:{uuid.uuid4()}",
-            title=title[:500],
-            title_hash=title_hash(f"idea {title}"),
-            summary=result["research_notes"][:2000],
+        ids = store_visual_post(
+            db,
+            result=result,
+            checks=checks,
+            sector=sector,
+            title=title,
             source=IDEA_SOURCE,
-            category="idea",
-            business_type=sector,
-            pillar="workflow",
-            status="drafted",
+            kind="idea",
+            poster_key="infographic",
+            poster_schema=INFOGRAPHIC,
+            make_html=render_idea_html,
         )
-        db.add(item)
-        drafts = _save(db, result, "workflow", item, checks)
-        db.flush()
-
-        linkedin = drafts[0]
-        render_png(render_idea_html(result["infographic"]), idea_image_path(linkedin.id))
-        linkedin.carousel_path = str(
-            render_carousel(result["carousel"], OUTPUT_DIR / "carousels" / f"draft-{linkedin.id}")
-        )
-        db.commit()
-        log.info("Idea ready: %s (%s), drafts %s", title, sector, [d.id for d in drafts])
-        return [d.id for d in drafts]
+        log.info("Idea ready: %s (%s), drafts %s", title, sector, ids)
+        return ids

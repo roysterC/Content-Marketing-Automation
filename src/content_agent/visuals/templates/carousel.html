@@ -250,6 +250,7 @@
         size -= 0.5;
         s.style.fontSize = size + "px";
       }
+      s.dataset.scale = size / 16;  // read by the renderer's text-fit check
     });
   }
   document.fonts.ready.then(fit).finally(() => { document.body.dataset.ready = "1"; });

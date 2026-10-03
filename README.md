@@ -47,13 +47,18 @@ Telegram bot setup:
 | `content-agent draft --limit 3` | Draft LinkedIn, Facebook and carousel versions of the top ideas, then fact-check them |
 | `content-agent brief notes.txt --pillar proof` | Draft a post from your own notes (case studies, offers). Only facts in your notes are used |
 | `content-agent idea --sector "nail salons"` | Claude comes up with an automation idea for that business type, or a random one from `config/idea_sectors.yaml`. It checks the idea with web searches, writes the posts, renders an infographic PNG and a carousel, and sends them to Telegram |
+| `content-agent team --sector "barbers"` | Claude builds a "Your Barbershop's AI Team" org-chart poster (4 departments × 3 automations) with matching posts and carousel, and sends them to Telegram |
 | `content-agent render` | Render the carousel PDFs (LinkedIn document posts) and cover PNGs into `output/` |
 | `content-agent review` | Send pending drafts to Telegram with Approve / Edit / Reject buttons |
 | `content-agent bot` | Long-running process that handles the button presses and edits (`/pending` resends drafts) |
 | `content-agent run` | ingest → score → draft → render → review in one go |
 
-From your phone, send `/idea` or `/idea dog groomers` to the bot to get a fresh idea in a
-few minutes. The bot keeps handling your buttons while it works.
+From your phone, send `/idea` or `/idea dog groomers` (or `/team barbers`) to the bot to get
+a fresh one in a few minutes. The bot keeps handling your buttons while it works.
+
+Every visual goes through a text-fit check. The templates shrink text to fit the canvas,
+and any visual that needed shrinking below 85% gets its wording shortened by Claude in one
+quick extra call, then re-rendered, so text stays readable on a phone.
 
 How approval works: **Approve** marks the draft as ready to post. **Reject** discards it.
 **Edit** asks you to reply with the new text, then sends the updated draft back for approval.
