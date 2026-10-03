@@ -132,7 +132,11 @@
         document.documentElement.style.fontSize = size + "px";
       }
     }
-    document.fonts.ready.then(fit).finally(() => { document.body.dataset.ready = "1"; });
+    document.fonts.ready.then(fit).finally(() => {
+      // Text scale the page needed to fit (1 = none); read by the renderer's fit check.
+      document.body.dataset.scale = parseFloat(document.documentElement.style.fontSize || 16) / 16;
+      document.body.dataset.ready = "1";
+    });
   </script>
 </body>
 </html>

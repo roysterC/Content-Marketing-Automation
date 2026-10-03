@@ -35,8 +35,18 @@ def render_idea_html(idea: dict) -> str:
     return _env.get_template("idea.html").render(idea=idea, author=AUTHOR, tagline=TAGLINE)
 
 
-def render_png(html: str, out_path: Path) -> Path:
-    """Screenshot a single 1080x1350 page (templates that set data-ready when laid out)."""
+def render_orgchart_html(chart: dict) -> str:
+    return _env.get_template("orgchart.html").render(chart=chart, author=AUTHOR, tagline=TAGLINE)
+
+
+def poster_path(draft_id: int) -> Path:
+    """Where a draft's single-image visual (infographic or org chart) is saved."""
+    return OUTPUT_DIR / "posters" / f"draft-{draft_id}.png"
+
+
+def render_png(html: str, out_path: Path) -> float:
+    """Screenshot a single 1080x1350 page. Returns the text scale the template had to
+    use to fit (1.0 = no shrinking)."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path=get_settings().chromium_path or None)
@@ -44,12 +54,14 @@ def render_png(html: str, out_path: Path) -> Path:
         page.set_content(html, wait_until="networkidle")
         page.wait_for_selector("body[data-ready]", state="attached", timeout=15000)
         page.screenshot(path=str(out_path))
+        scale = float(page.evaluate("document.body.dataset.scale || 1"))
         browser.close()
-    return out_path
+    return scale
 
 
-def render_carousel(slides: list[dict], out_stem: Path) -> Path:
-    """Write <out_stem>.pdf (all slides) and <out_stem>-cover.png. Returns the PDF path."""
+def render_carousel(slides: list[dict], out_stem: Path) -> tuple[Path, list[float]]:
+    """Write <out_stem>.pdf (all slides) and <out_stem>-cover.png. Returns the PDF path
+    and each slide's text scale (1.0 = no shrinking needed)."""
     out_stem.parent.mkdir(parents=True, exist_ok=True)
     html = render_html(slides)
     pdf_path = out_stem.with_suffix(".pdf")
@@ -65,8 +77,11 @@ def render_carousel(slides: list[dict], out_stem: Path) -> Path:
             height=f"{SLIDE_H}px",
             print_background=True,
         )
+        scales = page.eval_on_selector_all(
+            "section.slide", "els => els.map(e => parseFloat(e.dataset.scale || 1))"
+        )
         browser.close()
-    return pdf_path
+    return pdf_path, scales
 
 
 def render_pending() -> int:
@@ -84,7 +99,11 @@ def render_pending() -> int:
         for d in drafts:
             if not d.carousel:
                 continue
-            path = render_carousel(d.carousel, OUTPUT_DIR / "carousels" / f"draft-{d.id}")
+            from content_agent.drafting.fit import render_carousel_fitted
+
+            path, d.carousel = render_carousel_fitted(
+                d.carousel, OUTPUT_DIR / "carousels" / f"draft-{d.id}"
+            )
             d.carousel_path = str(path)
             db.commit()
             log.info("Rendered %s", path)

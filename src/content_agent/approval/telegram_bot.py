@@ -46,8 +46,9 @@ def format_draft(d: Draft) -> str:
     lines = [f"#{d.id} · {platform} · {d.pillar}", "", d.body]
     if d.first_comment:
         lines += ["", "— First comment —", d.first_comment]
-    if d.item and d.item.url.startswith("idea:"):
-        lines += ["", f"Source: Claude's own idea ({d.item.business_type}), web-checked"]
+    if d.item and d.item.url.startswith(("idea:", "team:")):
+        kind = "AI team chart" if d.item.url.startswith("team:") else "idea"
+        lines += ["", f"Source: Claude's own {kind} ({d.item.business_type}), web-checked"]
     elif d.item:
         lines += ["", f"Source: {d.item.source} — {d.item.url}"]
     fc = d.factcheck or {}
@@ -75,13 +76,16 @@ def keyboard(draft_id: int) -> InlineKeyboardMarkup:
 
 
 async def _send_draft(bot: Bot, chat_id: str, d: Draft) -> int:
-    from content_agent.drafting.idea import idea_image_path
+    from content_agent.config import OUTPUT_DIR
+    from content_agent.visuals.render import poster_path
 
-    image = idea_image_path(d.id)
+    image = poster_path(d.id)
+    if not image.exists():  # where ideas were saved before posters/ existed
+        image = OUTPUT_DIR / "ideas" / f"draft-{d.id}.png"
     if image.exists():
         # As a document, not a photo: Telegram recompresses photos, and this is the
         # full-quality PNG to upload to LinkedIn/Facebook.
-        await bot.send_document(chat_id, image, caption=f"Infographic for draft #{d.id}")
+        await bot.send_document(chat_id, image, caption=f"Image for draft #{d.id}")
     if d.carousel_path and Path(d.carousel_path).exists():
         await bot.send_document(
             chat_id, Path(d.carousel_path), caption=f"Carousel for draft #{d.id}"
@@ -169,22 +173,41 @@ async def on_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text("No pending drafts.")
 
 
-async def on_idea(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """/idea [business type] - generate a fresh automation idea and send it here."""
+def _generator_command(what: str, load_generator):
+    """A /command that runs a slow generator in a thread and sends the result here.
+    `load_generator` imports lazily so the bot starts without loading Playwright."""
+
+    async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        sector = " ".join(context.args).strip() or None
+        await update.message.reply_text(
+            f"Working on {what} for {sector or 'a random business type'}. "
+            "This takes a few minutes (research, writing, fact-check, graphics)."
+        )
+        try:
+            ids = await asyncio.to_thread(load_generator(), sector)
+        except Exception as e:
+            log.exception("Generating %s failed", what)
+            await update.message.reply_text(f"Generating {what} failed: {e}"[:TELEGRAM_LIMIT])
+            return
+        await _send_pending(context.bot, str(update.effective_chat.id), ids)
+
+    return handler
+
+
+def _idea_generator():
     from content_agent.drafting.idea import generate_idea
 
-    sector = " ".join(context.args).strip() or None
-    await update.message.reply_text(
-        f"Working on an idea for {sector or 'a random business type'}. "
-        "This takes a few minutes (research, writing, fact-check, graphics)."
-    )
-    try:
-        ids = await asyncio.to_thread(generate_idea, sector)
-    except Exception as e:
-        log.exception("Idea generation failed")
-        await update.message.reply_text(f"Idea generation failed: {e}"[:TELEGRAM_LIMIT])
-        return
-    await _send_pending(context.bot, str(update.effective_chat.id), ids)
+    return generate_idea
+
+
+def _team_generator():
+    from content_agent.drafting.team import generate_team
+
+    return generate_team
+
+
+on_idea = _generator_command("an automation idea", _idea_generator)
+on_team = _generator_command("an AI team chart", _team_generator)
 
 
 async def on_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -200,6 +223,7 @@ def run_bot() -> None:
     app.add_handler(CommandHandler("pending", on_pending, filters=only_roy))
     # block=False: generating takes minutes; keep handling buttons meanwhile.
     app.add_handler(CommandHandler("idea", on_idea, filters=only_roy, block=False))
+    app.add_handler(CommandHandler("team", on_team, filters=only_roy, block=False))
     app.add_handler(MessageHandler(only_roy & filters.REPLY & filters.TEXT, on_reply))
     log.info("Approval bot running")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
