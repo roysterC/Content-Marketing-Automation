@@ -30,7 +30,10 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
    One package per morning (lower volume, higher depth).
 3. **Visuals** — primarily HTML templates rendered to PNG/PDF via Playwright (branded, consistent carousels/diagrams). Image model only for occasional hero images.
 4. **Human review gate** — drafts sent to Slack or Telegram with Approve / Edit / Reject. Nothing publishes without approval.
-5. **Publish** — via a scheduler's API (Buffer / Publer / Metricool) initially; direct Meta Graph / LinkedIn APIs only if outgrown.
+5. **Publish** — Roy posts by hand from a Telegram **posting kit** (no paid scheduler: Roy
+   ruled out any cost). Next step: free official APIs, Facebook Page (Graph API) first, then
+   the LinkedIn personal profile (self-serve "Share on LinkedIn"), Instagram optional. Each
+   one is opt-in, and the kit remains the fallback.
 6. **Engage** — Facebook: comment-keyword → DM lead magnet via Messenger tooling (e.g. ManyChat). LinkedIn: agent **drafts** replies/DMs for Roy to send manually.
 7. **Lead funnel** — lead magnet → landing page w/ email capture → short nurture sequence → Cal.com booking → CRM.
 8. **Analytics** — weekly metric pull, tag posts by pillar/hook/format, feed top performers back into drafting prompts.
@@ -79,7 +82,11 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
   `/pending`), `brief` for Roy's own material, weekday 07:00 cron, auto-deploy from `main`.
   Still open: Roy's example posts and brand-voice edits; SQLite (not Postgres) is fine for
   now. Next format candidate: "industry problem" with its own poster.
-- **Phase 2: not started.** Blocked on choosing the scheduler.
+- **Phase 2: posting kit built.** Approve → copyable post text, attachment (carousel PDF
+  with its LinkedIn document title, or the infographic), first comment, and a ✅ Posted
+  button (records `posted_at` and an optional `post_url`); 12:00 weekday reminders. Next:
+  direct publishing through free official APIs (see Pipeline step 5), pending Roy's
+  developer-app setup.
 - **Phase 3: not started.**
 - **Phase 4: not started.** Needs ~30 published posts.
 - Content quality is improved iteratively alongside every phase (prompts, templates,
@@ -93,7 +100,11 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 - Content generation: **one shared pipeline over pluggable formats**; one package per weekday
   morning; format chosen by weighted random (75% idea / 25% team); feeds out of the daily run
 
+- Publishing: **no paid scheduler.** Posting kit now; free official APIs to follow
+
 ## Open decisions
-- Which scheduler (Buffer / Publer / Metricool)
+- Direct APIs: whether the LinkedIn first comment may be posted through the API (it's Roy's
+  own comment on his own post, but "no automated comments" is a hard rule), and whether
+  Instagram is in scope
 - First lead magnet topic (candidate: "The 5 automations every salon should run to stop losing bookings to missed calls, with time saved for each")
 - Brand voice examples — Roy to supply
