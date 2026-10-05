@@ -76,9 +76,7 @@ $SUDO systemctl daemon-reload
 echo "Installed $SERVICE (not started yet - needs Telegram settings in .env)"
 
 say "Daily cron job (weekdays 07:00 server time)"
-CRON_LINE="0 7 * * 1-5 cd $REPO_DIR && PATH=$HOME/.local/bin:\$PATH .venv/bin/content-agent run >> logs/run.log 2>&1"
-( crontab -l 2>/dev/null | grep -v 'content-agent run' || true; echo "$CRON_LINE" ) | crontab -
-crontab -l | grep 'content-agent run'
+bash scripts/install_cron.sh
 
 cat <<EOF
 

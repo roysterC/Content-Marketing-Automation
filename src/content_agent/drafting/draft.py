@@ -1,6 +1,7 @@
 """Turn a scored item (or a brief from Roy) into LinkedIn + Facebook drafts."""
 
 import logging
+import shutil
 import uuid
 
 from sqlalchemy import select
@@ -11,82 +12,110 @@ from content_agent.drafting.factcheck import factcheck
 from content_agent.llm import ask_json
 from content_agent.prompts import AUDIENCE, DESIGN_RULES, STYLE_RULES
 from content_agent.visuals.icons import ICON_NAMES
+from content_agent.visuals.schemas import INFOGRAPHIC
 
 log = logging.getLogger(__name__)
 
 PILLARS = ("workflow", "proof", "industry", "offer")
 LAYOUTS = ("cover", "steps", "stats", "compare", "checklist", "grid", "insight", "cta")
 
-SCHEMA = {
+
+LINKEDIN = {
     "type": "object",
     "properties": {
-        "linkedin": {
-            "type": "object",
-            "properties": {
-                "hook": {"type": "string"},
-                "body": {"type": "string"},
-                "first_comment": {"type": "string"},
-            },
-            "required": ["hook", "body", "first_comment"],
-            "additionalProperties": False,
-        },
-        "facebook": {
-            "type": "object",
-            "properties": {
-                "hook": {"type": "string"},
-                "body": {"type": "string"},
-            },
-            "required": ["hook", "body"],
-            "additionalProperties": False,
-        },
-        "carousel": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "layout": {"type": "string", "enum": list(LAYOUTS)},
-                    "kicker": {"type": "string"},
-                    "title": {"type": "string"},
-                    "body": {"type": "string"},
-                    "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
-                    "points": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
-                                "title": {"type": "string"},
-                                "detail": {"type": "string"},
-                                "value": {"type": "string"},
-                            },
-                            "required": ["icon", "title", "detail", "value"],
-                            "additionalProperties": False,
-                        },
-                    },
-                    "before_label": {"type": "string"},
-                    "after_label": {"type": "string"},
-                    "before": {"type": "array", "items": {"type": "string"}},
-                    "after": {"type": "array", "items": {"type": "string"}},
-                },
-                "required": [
-                    "layout",
-                    "kicker",
-                    "title",
-                    "body",
-                    "icon",
-                    "points",
-                    "before_label",
-                    "after_label",
-                    "before",
-                    "after",
-                ],
-                "additionalProperties": False,
-            },
-        },
+        "hook": {"type": "string"},
+        "body": {"type": "string"},
+        "first_comment": {"type": "string"},
     },
-    "required": ["linkedin", "facebook", "carousel"],
+    "required": ["hook", "body", "first_comment"],
     "additionalProperties": False,
 }
+
+FACEBOOK = {
+    "type": "object",
+    "properties": {
+        "hook": {"type": "string"},
+        "body": {"type": "string"},
+    },
+    "required": ["hook", "body"],
+    "additionalProperties": False,
+}
+
+CAROUSEL = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "layout": {"type": "string", "enum": list(LAYOUTS)},
+            "kicker": {"type": "string"},
+            "title": {"type": "string"},
+            "body": {"type": "string"},
+            "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
+            "points": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
+                        "title": {"type": "string"},
+                        "detail": {"type": "string"},
+                        "value": {"type": "string"},
+                    },
+                    "required": ["icon", "title", "detail", "value"],
+                    "additionalProperties": False,
+                },
+            },
+            "before_label": {"type": "string"},
+            "after_label": {"type": "string"},
+            "before": {"type": "array", "items": {"type": "string"}},
+            "after": {"type": "array", "items": {"type": "string"}},
+        },
+        "required": [
+            "layout",
+            "kicker",
+            "title",
+            "body",
+            "icon",
+            "points",
+            "before_label",
+            "after_label",
+            "before",
+            "after",
+        ],
+        "additionalProperties": False,
+    },
+}
+
+RESEARCH_NOTES = {
+    "type": "string",
+    "description": (
+        "What you checked on the web and the URLs you relied on, so the fact-checker and "
+        "Roy can verify. Plain text."
+    ),
+}
+
+
+def post_schema(visual_key: str, visual_schema: dict, research_notes: bool = False) -> dict:
+    """Schema for one post package: LinkedIn + Facebook text, a carousel, and one
+    single-image visual (the infographic, the org chart, ...)."""
+    properties = {
+        "linkedin": LINKEDIN,
+        "facebook": FACEBOOK,
+        "carousel": CAROUSEL,
+        visual_key: visual_schema,
+    }
+    if research_notes:
+        properties["research_notes"] = RESEARCH_NOTES
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
+
+# Research-item and brief drafts: the infographic is their single image.
+SCHEMA = post_schema("infographic", INFOGRAPHIC)
 
 
 def _system_prompt() -> str:
@@ -123,6 +152,9 @@ Output, for one idea:
   No URLs in the body. `first_comment` holds the source link or other links, or "" if none.
 - facebook: a shorter, more conversational variant with different wording. `body` includes
   the hook. Never copy the LinkedIn text.
+- infographic: a single-image summary (posted with the Facebook version, and usable on
+  LinkedIn instead of the carousel): the problem, 3-5 steps of how the fix works, and 2-3
+  outcomes. Same voice, number and design rules as the carousel.
 - carousel: 6-8 slides for a LinkedIn PDF carousel, designed as infographics:
 
 {DESIGN_RULES.format(icons=", ".join(ICON_NAMES))}"""
@@ -181,6 +213,28 @@ def _save(db, result: dict, pillar: str, item: Item | None, checks: dict) -> lis
     return drafts
 
 
+def share_poster(drafts: list[Draft]) -> None:
+    """Give every draft in a group the image rendered for the LinkedIn draft."""
+    from content_agent.visuals.render import poster_path
+
+    source = poster_path(drafts[0].id)
+    for d in drafts[1:]:
+        if source.exists():
+            shutil.copyfile(source, poster_path(d.id))
+
+
+def render_infographic(drafts: list[Draft], result: dict) -> None:
+    """Render the group's infographic (with the text-fit check) and share it."""
+    from content_agent.drafting.fit import render_poster_fitted
+    from content_agent.visuals.render import poster_path, render_idea_html
+
+    render_poster_fitted(
+        render_idea_html, result["infographic"], INFOGRAPHIC, poster_path(drafts[0].id),
+        "infographic",
+    )  # fmt: skip
+    share_poster(drafts)
+
+
 def _generate(prompt: str, source_text: str) -> tuple[dict, dict]:
     result = ask_json(system=_system_prompt(), prompt=prompt, schema=SCHEMA, effort="high")
     checks = factcheck(result, source_text)
@@ -203,9 +257,10 @@ def draft_top_items(limit: int = 3) -> int:
             pillar = item.pillar if item.pillar in PILLARS else "workflow"
             source_text = f"{item.title}\n{item.url}\n{item.summary}"
             result, checks = _generate(_prompt_for_item(item, pillar), source_text)
-            _save(db, result, pillar, item, checks)
+            drafts = _save(db, result, pillar, item, checks)
             item.status = "drafted"
             db.commit()
+            render_infographic(drafts, result)
             log.info("Drafted item %d (%s)", item.id, item.title[:60])
         return len(items)
 
@@ -218,4 +273,5 @@ def draft_from_brief(brief: str, pillar: str, business_type: str) -> list[int]:
     with session() as db:
         drafts = _save(db, result, pillar, None, checks)
         db.commit()
+        render_infographic(drafts, result)
         return [d.id for d in drafts]

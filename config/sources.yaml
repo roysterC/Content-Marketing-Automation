@@ -1,44 +1,19 @@
-# Research sources. Any RSS/Atom feed works; Reddit exposes one per subreddit
-# (append .rss). `category` is just a label stored on each item to help you see
-# where good ideas come from - it does not restrict what gets drafted.
+# Research feeds for the manual `ingest` -> `score` -> `draft` tools. They are NOT part
+# of the morning run any more (that's `daily`, which researches on the web itself).
+# Reddit was removed: too noisy for this audience. Any RSS/Atom feed works. `category`
+# is just a label stored on each item; it does not restrict what gets drafted.
 #
 # Add, remove or comment out freely. Verify a feed loads before relying on it:
 #   content-agent ingest --source "<name>"
 
 sources:
   # --- Initial client focus: salons / phone-booking businesses ---
-  - name: r/Hairstylist
-    url: https://www.reddit.com/r/Hairstylist/.rss
-    category: salons
-  - name: r/Nailtechs
-    url: https://www.reddit.com/r/Nailtechs/.rss
-    category: salons
-  - name: r/Barber
-    url: https://www.reddit.com/r/Barber/.rss
-    category: salons
-  - name: r/salonowners
-    url: https://www.reddit.com/r/salonowners/.rss
-    category: salons
   - name: Professional Beauty (UK)
     url: https://professionalbeauty.co.uk/rss
     category: salons
   - name: Salon Today
     url: https://www.salontoday.com/rss
     category: salons
-
-  # --- Other high-value automation industries ---
-  - name: r/smallbusiness
-    url: https://www.reddit.com/r/smallbusiness/.rss
-    category: smb
-  - name: r/sweatystartup
-    url: https://www.reddit.com/r/sweatystartup/.rss
-    category: trades
-  - name: r/TravelAgents
-    url: https://www.reddit.com/r/TravelAgents/.rss
-    category: travel
-  - name: r/dentistry
-    url: https://www.reddit.com/r/dentistry/.rss
-    category: clinics
 
   # --- AI releases (only used when it matters to small businesses) ---
   - name: OpenAI news

@@ -82,7 +82,7 @@
 </head>
 <body>
   <main class="page" id="page">
-    <div class="eyebrow">Automation idea <span class="pill">{{ idea.sector }}</span></div>
+    <div class="eyebrow">{{ idea.eyebrow or "Automation idea" }} <span class="pill">{{ idea.sector }}</span></div>
     <h1>{{ idea.title }}</h1>
     <p class="problem"><strong>The problem:</strong> {{ idea.problem }}</p>
 

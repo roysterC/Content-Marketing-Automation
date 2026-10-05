@@ -104,12 +104,13 @@ def test_idea_infographic_html_renders_steps_and_escapes():
     assert "<b>Phones</b>" not in html
 
 
-def test_format_draft_labels_claude_ideas():
+def test_format_draft_labels_generated_posts_by_format():
     from content_agent.db import Item
 
-    item = Item(url="idea:abc", title="t", source="Claude idea", business_type="barbers")
-    d = Draft(id=3, platform="facebook", pillar="workflow", hook="h", body="b", item=item)
-    assert "Claude's own idea (barbers)" in format_draft(d)
+    for url, label in [("idea:abc", "automation idea"), ("team:abc", "AI team chart")]:
+        item = Item(url=url, title="t", source="Claude", business_type="barbers")
+        d = Draft(id=3, platform="facebook", pillar="workflow", hook="h", body="b", item=item)
+        assert f"Claude's own {label} (barbers)" in format_draft(d)
 
 
 def test_schema_and_prompt_share_the_icon_set():
@@ -120,3 +121,27 @@ def test_schema_and_prompt_share_the_icon_set():
     assert set(slide["properties"]["icon"]["enum"]) == {"", *ICON_NAMES}
     assert "infographic first" in _system_prompt()
     assert "<svg" in icon("not-an-icon")  # unknown names fall back, never crash
+
+
+def test_every_post_has_one_single_image_visual():
+    from content_agent.drafting import draft
+    from content_agent.formats import FORMATS
+
+    assert "infographic" in draft.SCHEMA["required"]
+    assert "infographic" in FORMATS["idea"].schema["required"]
+    team = FORMATS["team"].schema
+    assert "orgchart" in team["required"] and "infographic" not in team["properties"]
+    for fmt in FORMATS.values():
+        assert {"linkedin", "facebook", "carousel", "research_notes"} <= set(fmt.schema["required"])
+
+
+def test_share_poster_gives_facebook_draft_the_same_image(monkeypatch, tmp_path):
+    from content_agent.drafting.draft import share_poster
+    from content_agent.visuals import render
+
+    monkeypatch.setattr(render, "OUTPUT_DIR", tmp_path)
+    li, fb = Draft(id=10), Draft(id=11)
+    render.poster_path(10).parent.mkdir(parents=True)
+    render.poster_path(10).write_bytes(b"png")
+    share_poster([li, fb])
+    assert render.poster_path(11).read_bytes() == b"png"

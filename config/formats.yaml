@@ -1,0 +1,35 @@
+# Morning generator settings (content-agent daily).
+
+# How many post packages the weekday 07:00 run makes. Each package is one LinkedIn and
+# one Facebook draft with a single-image visual and a carousel.
+posts_per_day: 1
+
+# Chance of each format, as relative weights (75 / 25 = three ideas for every team chart).
+formats:
+  idea: 75
+  team: 25
+
+# Business types to write for, with relative weights. Higher = picked more often. The
+# initial client focus (phone-booking businesses) is weighted up.
+sectors:
+  nail salons: 2
+  hair salons: 2
+  barbers: 1
+  beauty clinics: 1
+  aesthetics clinics: 1
+  dog groomers: 1
+  physiotherapists: 1
+  dental practices: 1
+  driving instructors: 1
+  personal trainers: 1
+  travel agencies: 1
+  plumbers and electricians: 1
+  cleaning companies: 1
+  estate and letting agents: 1
+  accountants and bookkeepers: 1
+  wedding venues: 1
+  restaurants taking bookings: 1
+  garages and MOT centres: 1
+
+# Don't reuse a business type used in this many most recent posts.
+avoid_recent_sectors: 3

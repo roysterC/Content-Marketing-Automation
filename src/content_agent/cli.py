@@ -8,7 +8,10 @@ import typer
 
 from content_agent import db
 
-app = typer.Typer(help="Phase 1 content pipeline: research -> draft -> visuals -> approval.")
+app = typer.Typer(
+    help="Content agent. Daily use: `daily` (cron) and `make`. The feed tools (ingest, "
+    "score, draft) are manual extras and no longer part of the morning run."
+)
 
 
 @app.callback()
@@ -59,40 +62,46 @@ def brief(
     typer.echo(f"Created drafts {ids}")
 
 
+def _send(ids: list[int]) -> None:
+    from content_agent.approval.telegram_bot import send_pending
+
+    typer.echo(f"Created drafts {ids}; sent {send_pending()} drafts for review")
+
+
 @app.command()
-def idea(
-    sector: Annotated[
-        str | None, typer.Option(help="Business type, e.g. 'nail salons'. Random if omitted")
-    ] = None,
-    send: Annotated[bool, typer.Option(help="Send it to Telegram when ready")] = True,
+def daily(
+    send: Annotated[bool, typer.Option(help="Send to Telegram when ready")] = True,
 ) -> None:
-    """Have Claude come up with an automation idea (web-checked) with an infographic."""
-    from content_agent.drafting.idea import generate_idea
+    """The morning run: picks a format at random (weights in config/formats.yaml),
+    researches it and builds the post package. This is what the weekday cron runs."""
+    from content_agent.generate import daily as run_daily
 
-    ids = generate_idea(sector)
-    typer.echo(f"Created drafts {ids}")
+    ids = run_daily()
     if send:
-        from content_agent.approval.telegram_bot import send_pending
-
-        typer.echo(f"Sent {send_pending()} drafts for review")
+        _send(ids)
+    else:
+        typer.echo(f"Created drafts {ids}")
 
 
 @app.command()
-def team(
+def make(
+    format_name: Annotated[str, typer.Argument(metavar="FORMAT", help="idea or team")],
     sector: Annotated[
         str | None, typer.Option(help="Business type, e.g. 'barbers'. Random if omitted")
     ] = None,
-    send: Annotated[bool, typer.Option(help="Send it to Telegram when ready")] = True,
+    send: Annotated[bool, typer.Option(help="Send to Telegram when ready")] = True,
 ) -> None:
-    """Have Claude build a "Your <business>'s AI Team" org-chart post."""
-    from content_agent.drafting.team import generate_team
+    """Build one post package in a specific format, e.g. `make team --sector barbers`."""
+    from content_agent.formats import FORMATS
+    from content_agent.generate import generate
 
-    ids = generate_team(sector)
-    typer.echo(f"Created drafts {ids}")
+    if format_name not in FORMATS:
+        raise typer.BadParameter(f"choose one of: {', '.join(FORMATS)}")
+    ids = generate(format_name, sector)
     if send:
-        from content_agent.approval.telegram_bot import send_pending
-
-        typer.echo(f"Sent {send_pending()} drafts for review")
+        _send(ids)
+    else:
+        typer.echo(f"Created drafts {ids}")
 
 
 @app.command()
@@ -119,14 +128,10 @@ def bot() -> None:
     run_bot()
 
 
-@app.command()
-def run(draft_limit: int = 3) -> None:
-    """Full Phase 1 pass: ingest -> score -> draft -> render -> send for review."""
-    ingest()
-    score()
-    draft(draft_limit)
-    render()
-    review()
+@app.command(hidden=True)
+def run() -> None:
+    """Old name for `daily`, kept so an un-updated cron line still works."""
+    daily(send=True)
 
 
 if __name__ == "__main__":
