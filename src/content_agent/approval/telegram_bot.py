@@ -26,6 +26,7 @@ from telegram.ext import (
 
 from content_agent.config import get_settings
 from content_agent.db import Draft, session
+from content_agent.formats import FORMATS
 
 log = logging.getLogger(__name__)
 
@@ -46,9 +47,9 @@ def format_draft(d: Draft) -> str:
     lines = [f"#{d.id} · {platform} · {d.pillar}", "", d.body]
     if d.first_comment:
         lines += ["", "— First comment —", d.first_comment]
-    if d.item and d.item.url.startswith(("idea:", "team:")):
-        kind = "AI team chart" if d.item.url.startswith("team:") else "idea"
-        lines += ["", f"Source: Claude's own {kind} ({d.item.business_type}), web-checked"]
+    fmt = FORMATS.get(d.item.url.split(":", 1)[0]) if d.item else None
+    if fmt:
+        lines += ["", f"Source: Claude's own {fmt.label} ({d.item.business_type}), web-checked"]
     elif d.item:
         lines += ["", f"Source: {d.item.source} — {d.item.url}"]
     fc = d.factcheck or {}
@@ -173,9 +174,9 @@ async def on_pending(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text("No pending drafts.")
 
 
-def _generator_command(what: str, load_generator):
+def _generator_command(what: str, run):
     """A /command that runs a slow generator in a thread and sends the result here.
-    `load_generator` imports lazily so the bot starts without loading Playwright."""
+    `run(sector)` returns draft ids; sector is the command's argument, if any."""
 
     async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         sector = " ".join(context.args).strip() or None
@@ -184,7 +185,7 @@ def _generator_command(what: str, load_generator):
             "This takes a few minutes (research, writing, fact-check, graphics)."
         )
         try:
-            ids = await asyncio.to_thread(load_generator(), sector)
+            ids = await asyncio.to_thread(run, sector)
         except Exception as e:
             log.exception("Generating %s failed", what)
             await update.message.reply_text(f"Generating {what} failed: {e}"[:TELEGRAM_LIMIT])
@@ -194,20 +195,20 @@ def _generator_command(what: str, load_generator):
     return handler
 
 
-def _idea_generator():
-    from content_agent.drafting.idea import generate_idea
+def _daily(sector: str | None) -> list[int]:
+    """/daily: today's random format; a business type argument overrides the random one."""
+    from content_agent.generate import generate, load_settings, pick_format
 
-    return generate_idea
-
-
-def _team_generator():
-    from content_agent.drafting.team import generate_team
-
-    return generate_team
+    return generate(pick_format(load_settings()).name, sector)
 
 
-on_idea = _generator_command("an automation idea", _idea_generator)
-on_team = _generator_command("an AI team chart", _team_generator)
+def _make(name: str):
+    def run(sector: str | None) -> list[int]:
+        from content_agent.generate import generate
+
+        return generate(name, sector)
+
+    return run
 
 
 async def on_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -221,9 +222,17 @@ def run_bot() -> None:
     app.add_handler(CallbackQueryHandler(on_noop, pattern=r"^noop:"))
     app.add_handler(CallbackQueryHandler(on_button, pattern=r"^(approve|edit|reject):\d+$"))
     app.add_handler(CommandHandler("pending", on_pending, filters=only_roy))
+    # One command per format (/idea, /team, ...) plus /daily for a random one.
     # block=False: generating takes minutes; keep handling buttons meanwhile.
-    app.add_handler(CommandHandler("idea", on_idea, filters=only_roy, block=False))
-    app.add_handler(CommandHandler("team", on_team, filters=only_roy, block=False))
+    for name, fmt in FORMATS.items():
+        article = "an" if fmt.label[0].lower() in "aeiou" else "a"
+        handler = _generator_command(f"{article} {fmt.label}", _make(name))
+        app.add_handler(CommandHandler(name, handler, filters=only_roy, block=False))
+    app.add_handler(
+        CommandHandler(
+            "daily", _generator_command("today's post", _daily), filters=only_roy, block=False
+        )
+    )
     app.add_handler(MessageHandler(only_roy & filters.REPLY & filters.TEXT, on_reply))
     log.info("Approval bot running")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

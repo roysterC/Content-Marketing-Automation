@@ -12,6 +12,7 @@ from content_agent.drafting.factcheck import factcheck
 from content_agent.llm import ask_json
 from content_agent.prompts import AUDIENCE, DESIGN_RULES, STYLE_RULES
 from content_agent.visuals.icons import ICON_NAMES
+from content_agent.visuals.schemas import INFOGRAPHIC
 
 log = logging.getLogger(__name__)
 
@@ -19,137 +20,102 @@ PILLARS = ("workflow", "proof", "industry", "offer")
 LAYOUTS = ("cover", "steps", "stats", "compare", "checklist", "grid", "insight", "cta")
 
 
-def _str(desc: str) -> dict:
-    return {"type": "string", "description": desc}
-
-
-INFOGRAPHIC = {
+LINKEDIN = {
     "type": "object",
     "properties": {
-        "eyebrow": _str(
-            "Small label above the title, 1-3 words, e.g. 'Automation idea', 'Industry "
-            "problem', 'Case study', 'Free guide'"
-        ),
-        "sector": _str("Business type as shown on the graphic, title case, e.g. 'Nail salons'"),
-        "title": _str(
-            "The idea as an outcome, max ~9 words, e.g. 'Turn missed calls into bookings'"
-        ),
-        "problem": _str("The pain in the owner's words, 1-2 sentences, max ~30 words"),
-        "steps": {
-            "type": "array",
-            "description": "3-5 steps of how the automation works, in order",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "icon": {"type": "string", "enum": ICON_NAMES},
-                    "title": _str("Max ~5 words"),
-                    "detail": _str("One plain sentence, max ~14 words"),
-                },
-                "required": ["icon", "title", "detail"],
-                "additionalProperties": False,
-            },
-        },
-        "impact": {
-            "type": "array",
-            "description": "2-3 outcomes. Short value (e.g. '~2 hrs', '24/7', '0') and label",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "icon": {"type": "string", "enum": ICON_NAMES},
-                    "value": _str("Max ~7 characters"),
-                    "label": _str("Max ~6 words"),
-                },
-                "required": ["icon", "value", "label"],
-                "additionalProperties": False,
-            },
-        },
-        "impact_note": _str("One short line saying the figures are illustrative estimates"),
-        "cta": _str("Short call to action, max ~7 words, e.g. 'DM me \"CALLS\" to see it working'"),
+        "hook": {"type": "string"},
+        "body": {"type": "string"},
+        "first_comment": {"type": "string"},
     },
-    "required": [
-        "eyebrow",
-        "sector",
-        "title",
-        "problem",
-        "steps",
-        "impact",
-        "impact_note",
-        "cta",
-    ],
+    "required": ["hook", "body", "first_comment"],
     "additionalProperties": False,
 }
 
-SCHEMA = {
+FACEBOOK = {
     "type": "object",
     "properties": {
-        "linkedin": {
-            "type": "object",
-            "properties": {
-                "hook": {"type": "string"},
-                "body": {"type": "string"},
-                "first_comment": {"type": "string"},
-            },
-            "required": ["hook", "body", "first_comment"],
-            "additionalProperties": False,
-        },
-        "facebook": {
-            "type": "object",
-            "properties": {
-                "hook": {"type": "string"},
-                "body": {"type": "string"},
-            },
-            "required": ["hook", "body"],
-            "additionalProperties": False,
-        },
-        "carousel": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "layout": {"type": "string", "enum": list(LAYOUTS)},
-                    "kicker": {"type": "string"},
-                    "title": {"type": "string"},
-                    "body": {"type": "string"},
-                    "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
-                    "points": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
-                                "title": {"type": "string"},
-                                "detail": {"type": "string"},
-                                "value": {"type": "string"},
-                            },
-                            "required": ["icon", "title", "detail", "value"],
-                            "additionalProperties": False,
-                        },
+        "hook": {"type": "string"},
+        "body": {"type": "string"},
+    },
+    "required": ["hook", "body"],
+    "additionalProperties": False,
+}
+
+CAROUSEL = {
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "layout": {"type": "string", "enum": list(LAYOUTS)},
+            "kicker": {"type": "string"},
+            "title": {"type": "string"},
+            "body": {"type": "string"},
+            "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
+            "points": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "icon": {"type": "string", "enum": ["", *ICON_NAMES]},
+                        "title": {"type": "string"},
+                        "detail": {"type": "string"},
+                        "value": {"type": "string"},
                     },
-                    "before_label": {"type": "string"},
-                    "after_label": {"type": "string"},
-                    "before": {"type": "array", "items": {"type": "string"}},
-                    "after": {"type": "array", "items": {"type": "string"}},
+                    "required": ["icon", "title", "detail", "value"],
+                    "additionalProperties": False,
                 },
-                "required": [
-                    "layout",
-                    "kicker",
-                    "title",
-                    "body",
-                    "icon",
-                    "points",
-                    "before_label",
-                    "after_label",
-                    "before",
-                    "after",
-                ],
-                "additionalProperties": False,
             },
+            "before_label": {"type": "string"},
+            "after_label": {"type": "string"},
+            "before": {"type": "array", "items": {"type": "string"}},
+            "after": {"type": "array", "items": {"type": "string"}},
         },
-        "infographic": INFOGRAPHIC,
+        "required": [
+            "layout",
+            "kicker",
+            "title",
+            "body",
+            "icon",
+            "points",
+            "before_label",
+            "after_label",
+            "before",
+            "after",
+        ],
+        "additionalProperties": False,
     },
-    "required": ["linkedin", "facebook", "carousel", "infographic"],
-    "additionalProperties": False,
 }
+
+RESEARCH_NOTES = {
+    "type": "string",
+    "description": (
+        "What you checked on the web and the URLs you relied on, so the fact-checker and "
+        "Roy can verify. Plain text."
+    ),
+}
+
+
+def post_schema(visual_key: str, visual_schema: dict, research_notes: bool = False) -> dict:
+    """Schema for one post package: LinkedIn + Facebook text, a carousel, and one
+    single-image visual (the infographic, the org chart, ...)."""
+    properties = {
+        "linkedin": LINKEDIN,
+        "facebook": FACEBOOK,
+        "carousel": CAROUSEL,
+        visual_key: visual_schema,
+    }
+    if research_notes:
+        properties["research_notes"] = RESEARCH_NOTES
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
+
+# Research-item and brief drafts: the infographic is their single image.
+SCHEMA = post_schema("infographic", INFOGRAPHIC)
 
 
 def _system_prompt() -> str:

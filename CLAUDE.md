@@ -20,8 +20,14 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 - Facebook: shorter, more conversational variant. Never cross-post identical copy.
 
 ## Pipeline
-1. **Research** — ingest industry sources for the initial focus (salons / phone-booking businesses) and other high-value automation industries (trade publications, subreddits, forums, RSS) plus relevant AI releases. LLM scores relevance to the target reader and dedupes. Store in DB.
-2. **Draft** — Claude writes per-platform drafts using a brand-voice file + 10–20 example posts.
+1. **Pick + research** — each weekday morning the generator picks a content format at random
+   (weights in `config/formats.yaml`: currently 75% `idea`, 25% `team`) and a business type
+   (weighted towards the initial focus, avoiding recently used ones). Claude researches the
+   topic with live web search. RSS feeds are no longer part of the daily run (Reddit removed
+   as too noisy); `ingest`/`score`/`draft` remain as manual extras.
+2. **Draft** — Claude writes the whole package: LinkedIn + Facebook drafts, the format's
+   single-image visual and a carousel, using a brand-voice file + 10–20 example posts.
+   One package per morning (lower volume, higher depth).
 3. **Visuals** — primarily HTML templates rendered to PNG/PDF via Playwright (branded, consistent carousels/diagrams). Image model only for occasional hero images.
 4. **Human review gate** — drafts sent to Slack or Telegram with Approve / Edit / Reject. Nothing publishes without approval.
 5. **Publish** — via a scheduler's API (Buffer / Publer / Metricool) initially; direct Meta Graph / LinkedIn APIs only if outgrown.
@@ -66,12 +72,13 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 4. **Phase 4:** analytics feedback loop (once ~30 posts of data exist).
 
 ## Status (update as phases progress)
-- **Phase 1: built and running on the VPS.** Research ingest + scoring, drafting with
-  fact-check, `brief` (Roy's notes), `idea` (Claude's own web-checked ideas), `team`
-  (AI-team org chart), infographic-first carousels with a text-fit check, Telegram approval
-  (`/idea`, `/team`, `/pending`), weekday 07:00 cron, auto-deploy from `main` via GitHub
-  Actions. Still open: Roy's example posts and brand-voice edits; SQLite (not Postgres) is
-  fine for now.
+- **Phase 1: built and running on the VPS.** One morning generator (`content-agent daily`,
+  `src/content_agent/generate.py`) over a format registry (`src/content_agent/formats/`:
+  `idea`, `team`), web research, fact-check, single-image visual + infographic-first
+  carousel with a text-fit check, Telegram approval (`/daily`, `/idea`, `/team`,
+  `/pending`), `brief` for Roy's own material, weekday 07:00 cron, auto-deploy from `main`.
+  Still open: Roy's example posts and brand-voice edits; SQLite (not Postgres) is fine for
+  now. Next format candidate: "industry problem" with its own poster.
 - **Phase 2: not started.** Blocked on choosing the scheduler.
 - **Phase 3: not started.**
 - **Phase 4: not started.** Needs ~30 published posts.
@@ -82,6 +89,9 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 - Approvals: **Telegram** (free, works well on a phone, simple bot API)
 - Orchestration: **Python service + cron** (code lives in `src/content_agent/`, see README)
 - Claude access: **Roy's Claude Pro/Max plan via the Claude Code CLI** (`claude -p`, `LLM_BACKEND=claude_code`) to avoid API costs; the pay-per-token API backend stays available (`LLM_BACKEND=api`)
+
+- Content generation: **one shared pipeline over pluggable formats**; one package per weekday
+  morning; format chosen by weighted random (75% idea / 25% team); feeds out of the daily run
 
 ## Open decisions
 - Which scheduler (Buffer / Publer / Metricool)

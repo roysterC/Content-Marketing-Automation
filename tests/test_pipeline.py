@@ -104,12 +104,13 @@ def test_idea_infographic_html_renders_steps_and_escapes():
     assert "<b>Phones</b>" not in html
 
 
-def test_format_draft_labels_claude_ideas():
+def test_format_draft_labels_generated_posts_by_format():
     from content_agent.db import Item
 
-    item = Item(url="idea:abc", title="t", source="Claude idea", business_type="barbers")
-    d = Draft(id=3, platform="facebook", pillar="workflow", hook="h", body="b", item=item)
-    assert "Claude's own idea (barbers)" in format_draft(d)
+    for url, label in [("idea:abc", "automation idea"), ("team:abc", "AI team chart")]:
+        item = Item(url=url, title="t", source="Claude", business_type="barbers")
+        d = Draft(id=3, platform="facebook", pillar="workflow", hook="h", body="b", item=item)
+        assert f"Claude's own {label} (barbers)" in format_draft(d)
 
 
 def test_schema_and_prompt_share_the_icon_set():
@@ -122,13 +123,16 @@ def test_schema_and_prompt_share_the_icon_set():
     assert "<svg" in icon("not-an-icon")  # unknown names fall back, never crash
 
 
-def test_every_draft_includes_an_infographic_except_team_charts():
-    from content_agent.drafting import draft, idea, team
+def test_every_post_has_one_single_image_visual():
+    from content_agent.drafting import draft
+    from content_agent.formats import FORMATS
 
     assert "infographic" in draft.SCHEMA["required"]
-    assert "infographic" in idea.SCHEMA["required"]
-    assert "infographic" not in team.SCHEMA["properties"]  # its image is the org chart
-    assert "orgchart" in team.SCHEMA["required"]
+    assert "infographic" in FORMATS["idea"].schema["required"]
+    team = FORMATS["team"].schema
+    assert "orgchart" in team["required"] and "infographic" not in team["properties"]
+    for fmt in FORMATS.values():
+        assert {"linkedin", "facebook", "carousel", "research_notes"} <= set(fmt.schema["required"])
 
 
 def test_share_poster_gives_facebook_draft_the_same_image(monkeypatch, tmp_path):

@@ -18,6 +18,9 @@ echo "==> Installing Python dependencies"
 echo "==> Ensuring Chromium is installed (no-op if current)"
 .venv/bin/playwright install chromium >/dev/null
 
+echo "==> Updating cron job"
+bash scripts/install_cron.sh
+
 if systemctl is-enabled --quiet "$SERVICE" 2>/dev/null; then
   echo "==> Restarting $SERVICE"
   if [ "$(id -u)" -eq 0 ]; then SUDO=""; else SUDO="sudo -n"; fi

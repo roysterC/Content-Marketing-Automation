@@ -1,15 +1,24 @@
 # Content-Marketing-Automation
 
-Phase 1 of the content agent described in [`CLAUDE.md`](CLAUDE.md): it finds post ideas,
-drafts LinkedIn and Facebook posts, renders carousels, and sends everything to Telegram
-for approval. Nothing gets published automatically. You approve a post, then post it yourself.
+Phase 1 of the content agent described in [`CLAUDE.md`](CLAUDE.md). Every weekday morning
+it picks a post format at random, researches a topic for a business type on the web,
+writes the LinkedIn and Facebook posts, renders a single-image visual and a carousel,
+and sends the package to Telegram for approval. Nothing is published automatically: you
+approve a post, then post it yourself.
 
 ```
-RSS / Reddit feeds ──► ingest ──► score (Claude) ──► draft + fact-check (Claude)
-                                                          │
-            Telegram  ◄── review ◄── render carousel PDF ◄┘
-       Approve / Edit / Reject
+07:00 weekdays: content-agent daily
+  pick format (75% idea, 25% team)  →  pick business type (not one used recently)
+    →  Claude researches (web) + writes posts, visual and carousel
+    →  fact-check  →  render visual + carousel (text-fit check)
+    →  Telegram: Approve / Edit / Reject
 ```
+
+Formats live in `src/content_agent/formats/` and their settings in `config/formats.yaml`:
+- **idea**: one concrete automation for a business type, shown as an infographic
+  (problem → how it works → outcomes).
+- **team**: "Your Barbershop's AI Team", the business's everyday jobs as automation "staff"
+  on an org chart.
 
 ## Setup
 
@@ -42,19 +51,26 @@ Telegram bot setup:
 
 | Command | What it does |
 |---|---|
-| `content-agent ingest` | Fetch the feeds in `config/sources.yaml` and store new items, skipping duplicates |
-| `content-agent score` | Claude scores each new item 0–10 for your target reader and suggests an angle |
-| `content-agent draft --limit 3` | Draft LinkedIn, Facebook and carousel versions of the top ideas, then fact-check them |
+| `content-agent daily` | The morning run (what the cron calls): picks a format by the weights in `config/formats.yaml`, builds `posts_per_day` packages and sends them to Telegram |
+| `content-agent make idea --sector "nail salons"` | One package in a specific format (`idea` or `team`), on demand. Leave out `--sector` for a weighted random business type |
 | `content-agent brief notes.txt --pillar proof` | Draft a post from your own notes (case studies, offers). Only facts in your notes are used |
-| `content-agent idea --sector "nail salons"` | Claude comes up with an automation idea for that business type, or a random one from `config/idea_sectors.yaml`. It checks the idea with web searches, writes the posts, renders an infographic PNG and a carousel, and sends them to Telegram |
-| `content-agent team --sector "barbers"` | Claude builds a "Your Barbershop's AI Team" org-chart poster (4 departments × 3 automations) with matching posts and carousel, and sends them to Telegram |
-| `content-agent render` | Render the carousel PDFs (LinkedIn document posts) and cover PNGs into `output/` |
-| `content-agent review` | Send pending drafts to Telegram with Approve / Edit / Reject buttons |
-| `content-agent bot` | Long-running process that handles the button presses and edits (`/pending` resends drafts) |
-| `content-agent run` | ingest → score → draft → render → review in one go |
+| `content-agent review` | Send any pending drafts to Telegram with Approve / Edit / Reject buttons |
+| `content-agent bot` | Long-running process that handles the button presses, edits and commands |
 
-From your phone, send `/idea` or `/idea dog groomers` (or `/team barbers`) to the bot to get
-a fresh one in a few minutes. The bot keeps handling your buttons while it works.
+Manual extras, not part of the morning run: `ingest` → `score` → `draft` → `render` work
+from the trade and AI-news feeds in `config/sources.yaml`.
+
+From your phone, the bot takes:
+- `/daily`: today's random format.
+- `/idea` or `/idea dog groomers`, `/team` or `/team barbers`: a specific format.
+- `/pending`: resend drafts you haven't reviewed.
+
+Each package takes a few minutes, and the bot keeps handling your buttons meanwhile.
+
+To change the mix, edit `config/formats.yaml` (format weights, business types and their
+weights, posts per day) and merge to `main`. To add a format, add a module in
+`src/content_agent/formats/` and register it in `FORMATS`; it gets a Telegram command
+automatically.
 
 Every visual goes through a text-fit check. The templates shrink text to fit the canvas,
 and any visual that needed shrinking below 85% gets its wording shortened by Claude in one
@@ -80,7 +96,9 @@ It finishes by printing the steps that need you: `claude setup-token` and the Te
 It's safe to re-run. What it sets up:
 
 - a systemd service, `content-agent-bot`, that keeps the Telegram buttons working
-- a cron job that runs `content-agent run` on weekdays at 07:00 server time, so drafts arrive before the working day
+- a cron job that runs `content-agent daily` on weekdays at 07:00 server time, so drafts
+  arrive before the working day. Every deploy re-applies it, so changes to it ship
+  automatically.
 
 ### Automatic deploys from GitHub
 
