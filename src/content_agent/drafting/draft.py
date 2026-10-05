@@ -1,6 +1,7 @@
 """Turn a scored item (or a brief from Roy) into LinkedIn + Facebook drafts."""
 
 import logging
+import shutil
 import uuid
 
 from sqlalchemy import select
@@ -16,6 +17,67 @@ log = logging.getLogger(__name__)
 
 PILLARS = ("workflow", "proof", "industry", "offer")
 LAYOUTS = ("cover", "steps", "stats", "compare", "checklist", "grid", "insight", "cta")
+
+
+def _str(desc: str) -> dict:
+    return {"type": "string", "description": desc}
+
+
+INFOGRAPHIC = {
+    "type": "object",
+    "properties": {
+        "eyebrow": _str(
+            "Small label above the title, 1-3 words, e.g. 'Automation idea', 'Industry "
+            "problem', 'Case study', 'Free guide'"
+        ),
+        "sector": _str("Business type as shown on the graphic, title case, e.g. 'Nail salons'"),
+        "title": _str(
+            "The idea as an outcome, max ~9 words, e.g. 'Turn missed calls into bookings'"
+        ),
+        "problem": _str("The pain in the owner's words, 1-2 sentences, max ~30 words"),
+        "steps": {
+            "type": "array",
+            "description": "3-5 steps of how the automation works, in order",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "icon": {"type": "string", "enum": ICON_NAMES},
+                    "title": _str("Max ~5 words"),
+                    "detail": _str("One plain sentence, max ~14 words"),
+                },
+                "required": ["icon", "title", "detail"],
+                "additionalProperties": False,
+            },
+        },
+        "impact": {
+            "type": "array",
+            "description": "2-3 outcomes. Short value (e.g. '~2 hrs', '24/7', '0') and label",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "icon": {"type": "string", "enum": ICON_NAMES},
+                    "value": _str("Max ~7 characters"),
+                    "label": _str("Max ~6 words"),
+                },
+                "required": ["icon", "value", "label"],
+                "additionalProperties": False,
+            },
+        },
+        "impact_note": _str("One short line saying the figures are illustrative estimates"),
+        "cta": _str("Short call to action, max ~7 words, e.g. 'DM me \"CALLS\" to see it working'"),
+    },
+    "required": [
+        "eyebrow",
+        "sector",
+        "title",
+        "problem",
+        "steps",
+        "impact",
+        "impact_note",
+        "cta",
+    ],
+    "additionalProperties": False,
+}
 
 SCHEMA = {
     "type": "object",
@@ -83,8 +145,9 @@ SCHEMA = {
                 "additionalProperties": False,
             },
         },
+        "infographic": INFOGRAPHIC,
     },
-    "required": ["linkedin", "facebook", "carousel"],
+    "required": ["linkedin", "facebook", "carousel", "infographic"],
     "additionalProperties": False,
 }
 
@@ -123,6 +186,9 @@ Output, for one idea:
   No URLs in the body. `first_comment` holds the source link or other links, or "" if none.
 - facebook: a shorter, more conversational variant with different wording. `body` includes
   the hook. Never copy the LinkedIn text.
+- infographic: a single-image summary (posted with the Facebook version, and usable on
+  LinkedIn instead of the carousel): the problem, 3-5 steps of how the fix works, and 2-3
+  outcomes. Same voice, number and design rules as the carousel.
 - carousel: 6-8 slides for a LinkedIn PDF carousel, designed as infographics:
 
 {DESIGN_RULES.format(icons=", ".join(ICON_NAMES))}"""
@@ -181,6 +247,28 @@ def _save(db, result: dict, pillar: str, item: Item | None, checks: dict) -> lis
     return drafts
 
 
+def share_poster(drafts: list[Draft]) -> None:
+    """Give every draft in a group the image rendered for the LinkedIn draft."""
+    from content_agent.visuals.render import poster_path
+
+    source = poster_path(drafts[0].id)
+    for d in drafts[1:]:
+        if source.exists():
+            shutil.copyfile(source, poster_path(d.id))
+
+
+def render_infographic(drafts: list[Draft], result: dict) -> None:
+    """Render the group's infographic (with the text-fit check) and share it."""
+    from content_agent.drafting.fit import render_poster_fitted
+    from content_agent.visuals.render import poster_path, render_idea_html
+
+    render_poster_fitted(
+        render_idea_html, result["infographic"], INFOGRAPHIC, poster_path(drafts[0].id),
+        "infographic",
+    )  # fmt: skip
+    share_poster(drafts)
+
+
 def _generate(prompt: str, source_text: str) -> tuple[dict, dict]:
     result = ask_json(system=_system_prompt(), prompt=prompt, schema=SCHEMA, effort="high")
     checks = factcheck(result, source_text)
@@ -203,9 +291,10 @@ def draft_top_items(limit: int = 3) -> int:
             pillar = item.pillar if item.pillar in PILLARS else "workflow"
             source_text = f"{item.title}\n{item.url}\n{item.summary}"
             result, checks = _generate(_prompt_for_item(item, pillar), source_text)
-            _save(db, result, pillar, item, checks)
+            drafts = _save(db, result, pillar, item, checks)
             item.status = "drafted"
             db.commit()
+            render_infographic(drafts, result)
             log.info("Drafted item %d (%s)", item.id, item.title[:60])
         return len(items)
 
@@ -218,4 +307,5 @@ def draft_from_brief(brief: str, pillar: str, business_type: str) -> list[int]:
     with session() as db:
         drafts = _save(db, result, pillar, None, checks)
         db.commit()
+        render_infographic(drafts, result)
         return [d.id for d in drafts]

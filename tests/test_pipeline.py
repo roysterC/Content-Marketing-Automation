@@ -120,3 +120,24 @@ def test_schema_and_prompt_share_the_icon_set():
     assert set(slide["properties"]["icon"]["enum"]) == {"", *ICON_NAMES}
     assert "infographic first" in _system_prompt()
     assert "<svg" in icon("not-an-icon")  # unknown names fall back, never crash
+
+
+def test_every_draft_includes_an_infographic_except_team_charts():
+    from content_agent.drafting import draft, idea, team
+
+    assert "infographic" in draft.SCHEMA["required"]
+    assert "infographic" in idea.SCHEMA["required"]
+    assert "infographic" not in team.SCHEMA["properties"]  # its image is the org chart
+    assert "orgchart" in team.SCHEMA["required"]
+
+
+def test_share_poster_gives_facebook_draft_the_same_image(monkeypatch, tmp_path):
+    from content_agent.drafting.draft import share_poster
+    from content_agent.visuals import render
+
+    monkeypatch.setattr(render, "OUTPUT_DIR", tmp_path)
+    li, fb = Draft(id=10), Draft(id=11)
+    render.poster_path(10).parent.mkdir(parents=True)
+    render.poster_path(10).write_bytes(b"png")
+    share_poster([li, fb])
+    assert render.poster_path(11).read_bytes() == b"png"

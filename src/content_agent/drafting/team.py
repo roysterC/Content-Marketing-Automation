@@ -76,17 +76,22 @@ ORGCHART = {
     "additionalProperties": False,
 }  # fmt: skip
 
+# The org chart replaces the infographic as this post's single image.
 SCHEMA = {
     **DRAFT_SCHEMA,
     "properties": {
-        **DRAFT_SCHEMA["properties"],
+        **{k: v for k, v in DRAFT_SCHEMA["properties"].items() if k != "infographic"},
         "orgchart": ORGCHART,
         "research_notes": _str(
             "What you checked on the web and the URLs you relied on, so the fact-checker "
             "and Roy can verify. Plain text."
         ),
     },
-    "required": [*DRAFT_SCHEMA["required"], "orgchart", "research_notes"],
+    "required": [
+        *(k for k in DRAFT_SCHEMA["required"] if k != "infographic"),
+        "orgchart",
+        "research_notes",
+    ],
 }
 
 TEAM_TASK = """\

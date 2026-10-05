@@ -15,13 +15,12 @@ from sqlalchemy import select
 
 from content_agent.config import CONFIG_DIR, OUTPUT_DIR
 from content_agent.db import Item, session
+from content_agent.drafting.draft import INFOGRAPHIC, _save, _str, _system_prompt, share_poster
 from content_agent.drafting.draft import SCHEMA as DRAFT_SCHEMA
-from content_agent.drafting.draft import _save, _system_prompt
 from content_agent.drafting.factcheck import factcheck
 from content_agent.drafting.fit import render_carousel_fitted, render_poster_fitted
 from content_agent.llm import ask_json
 from content_agent.research.fetch import title_hash
-from content_agent.visuals.icons import ICON_NAMES
 from content_agent.visuals.render import poster_path, render_idea_html
 
 log = logging.getLogger(__name__)
@@ -30,64 +29,16 @@ IDEA_SOURCE = "Claude idea"
 RECENT_IDEAS_IN_PROMPT = 30
 
 
-def _str(desc: str) -> dict:
-    return {"type": "string", "description": desc}
-
-
-INFOGRAPHIC = {
-    "type": "object",
-    "properties": {
-        "sector": _str("Business type as shown on the graphic, title case, e.g. 'Nail salons'"),
-        "title": _str(
-            "The idea as an outcome, max ~9 words, e.g. 'Turn missed calls into bookings'"
-        ),
-        "problem": _str("The pain in the owner's words, 1-2 sentences, max ~30 words"),
-        "steps": {
-            "type": "array",
-            "description": "3-5 steps of how the automation works, in order",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "icon": {"type": "string", "enum": ICON_NAMES},
-                    "title": _str("Max ~5 words"),
-                    "detail": _str("One plain sentence, max ~14 words"),
-                },
-                "required": ["icon", "title", "detail"],
-                "additionalProperties": False,
-            },
-        },
-        "impact": {
-            "type": "array",
-            "description": "2-3 outcomes. Short value (e.g. '~2 hrs', '24/7', '0') and label",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "icon": {"type": "string", "enum": ICON_NAMES},
-                    "value": _str("Max ~7 characters"),
-                    "label": _str("Max ~6 words"),
-                },
-                "required": ["icon", "value", "label"],
-                "additionalProperties": False,
-            },
-        },
-        "impact_note": _str("One short line saying the figures are illustrative estimates"),
-        "cta": _str("Short call to action, max ~7 words, e.g. 'DM me \"CALLS\" to see it working'"),
-    },
-    "required": ["sector", "title", "problem", "steps", "impact", "impact_note", "cta"],
-    "additionalProperties": False,
-}
-
 SCHEMA = {
     **DRAFT_SCHEMA,
     "properties": {
         **DRAFT_SCHEMA["properties"],
-        "infographic": INFOGRAPHIC,
         "research_notes": _str(
             "What you checked on the web and the URLs you relied on, so the fact-checker "
             "and Roy can verify. Plain text."
         ),
     },
-    "required": [*DRAFT_SCHEMA["required"], "infographic", "research_notes"],
+    "required": [*DRAFT_SCHEMA["required"], "research_notes"],
 }
 
 IDEA_TASK = """\
@@ -169,6 +120,7 @@ def store_visual_post(
     render_poster_fitted(
         make_html, result[poster_key], poster_schema, poster_path(linkedin.id), poster_key
     )
+    share_poster(drafts)
     path, linkedin.carousel = render_carousel_fitted(
         result["carousel"], OUTPUT_DIR / "carousels" / f"draft-{linkedin.id}"
     )
