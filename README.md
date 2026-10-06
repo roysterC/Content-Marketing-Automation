@@ -96,10 +96,14 @@ manual):
 4. The posting kit then uses it: the Facebook kit attaches it instead of the HTML
    infographic, and the LinkedIn kit offers it as an alternative to the carousel PDF.
 
-The prompt carries the exact approved text, so nothing new gets past the fact-check. The
-art style lives in `config/art_style.yaml` and is repeated word for word in every prompt,
-so every post looks like the same illustrator. It has three styles to compare
-(`gouache`, `watercolour`, `painterly`) and an `active` one. Sample prompts for all three
+The prompt fixes the look and leaves the layout to Nano Banana, so posts vary in
+composition without drifting in style:
+- **Fixed** (`config/art_style.yaml`, repeated word for word): painting technique,
+  background, font, colours, line weight, box style and icon style. There are three
+  styles to compare (`gouache`, `watercolour`, `painterly`) and an `active` one.
+- **Data**: the exact approved text (headline, problem, steps, figures, call to action,
+  signature), so nothing new gets past the fact-check.
+- **Free**: layout, composition, hierarchy and illustration. Nano Banana designs those. Sample prompts for all three
 are in [`docs/painted-style-samples.md`](docs/painted-style-samples.md). Once you have an
 image you like, attach it in Gemini as a style reference with each prompt: that's the
 strongest way to keep the look consistent.

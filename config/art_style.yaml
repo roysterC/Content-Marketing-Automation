@@ -1,8 +1,10 @@
 # Art style for the painted images Roy makes in the Gemini app (Nano Banana).
 #
-# Every Telegram image prompt repeats the active style word for word, so every post
-# looks like it came from the same illustrator. Change it on purpose, not per post:
-# a new wording means a new look across the feed.
+# The prompt fixes the *look* (this file) and hands over the *content* as data, then
+# lets Nano Banana design the layout itself, so posts vary in composition but always
+# share the same font, colours, line weight, box style and painting technique.
+# Every prompt repeats this file's wording word for word: change it on purpose, not per
+# post, because new wording means a new look across the feed.
 #
 # Try the styles side by side with /paint in Telegram, e.g. `/paint watercolour`, or
 # on the command line with `content-agent paint <draft id> --style watercolour`.
@@ -11,20 +13,30 @@
 
 active: gouache
 
-# Shared by every style: brand colours, typography and the rules that keep text exact.
-palette: >-
-  deep navy #0f1b2d, warm amber #f2a541 for highlights and key numbers, soft cream
-  #f4f1ea, mint green #7fd1ae for good outcomes, muted slate blue #a9b4c6 for
-  secondary text. No other strong colours.
-
-typography: >-
-  All text in a clean, bold, modern sans-serif (like Inter), set flat and crisp on top
-  of the artwork: straight, sharp and easy to read on a phone, never painted, curved or
-  hand-lettered.
+# The fixed design system, shared by every style. A style below can override any of
+# these keys (e.g. watercolour swaps the box style for ink outlines).
+design:
+  font: >-
+    One geometric sans-serif (like Inter) for all text: extra-bold headline, semibold
+    labels and numbers, regular body. Flat and crisp on top of the artwork, never
+    painted, curved or hand-lettered.
+  colours: >-
+    Deep navy #0f1b2d, cream #f4f1ea for main text, warm amber #f2a541 for highlights,
+    key numbers and the call to action, mint #7fd1ae for good outcomes, slate blue
+    #a9b4c6 for secondary text. No other strong colours.
+  lines: >-
+    One weight for every line, arrow and divider, about 3 px, rounded ends; amber where
+    it shows flow.
+  boxes: >-
+    Rounded corners (about 24 px), filled slightly lighter than the background, no
+    border or a thin 2 px tint, no hard shadows.
+  icons: >-
+    Small, same-size icons painted in the illustration's technique, mostly amber and
+    cream; never emoji or thin vector line icons.
 
 text_rules: >-
-  Reproduce every text in “curly quotes” exactly (spelling, capitals, punctuation, numbers), once
-  each. Add no other words, numbers, logos or watermarks anywhere, including on objects.
+  Use every “curly-quoted” text word for word, once each; text marked optional may be
+  left out. Add no other words, numbers, logos or watermarks, including on objects.
 
 styles:
   gouache:
@@ -35,9 +47,7 @@ styles:
       shapes with gentle painted shading, friendly rounded forms. Simple stylised people
       with minimal faces. Warm, calm and confident. Not cartoonish, glossy 3D,
       photographic or flat vector clip art.
-    background: >-
-      Deep navy with subtle brush texture and a soft amber glow top right. Text sits on
-      slightly lighter navy cards with softly painted edges.
+    background: Deep navy with subtle brush texture and soft warm amber light.
 
   watercolour:
     name: Watercolour and ink
@@ -46,9 +56,15 @@ styles:
       illustrated guide: soft colour bleeds, visible paper texture, plenty of white
       space. Simple stylised people with minimal faces. Light, friendly and tidy. Not
       cartoonish, 3D, photographic or flat vector clip art.
-    background: >-
-      Warm off-white watercolour paper. Text in deep navy, key numbers in amber, on pale
-      cream cards with a thin navy ink outline.
+    background: Warm off-white watercolour paper.
+    design:
+      colours: >-
+        Deep navy #0f1b2d for main text and ink lines, warm amber #f2a541 for
+        highlights, key numbers and the call to action, mint #7fd1ae for good outcomes,
+        slate blue #a9b4c6 for secondary text. No other strong colours.
+      boxes: >-
+        Rounded corners (about 24 px), a pale cream wash inside and a thin navy ink
+        outline, no shadows.
 
   painterly:
     name: Painterly digital
@@ -57,6 +73,8 @@ styles:
       lighting and warm highlights, like a high-end editorial cover: simple, readable
       shapes and a clear focal point. Simple stylised people with minimal faces. Not
       cartoonish, plastic 3D, photographic or flat vector clip art.
-    background: >-
-      Deep navy with warm amber light from the top right. Text sits on dark translucent
-      navy cards with soft edges so it stays crisp.
+    background: Deep navy with warm amber light falling across it.
+    design:
+      boxes: >-
+        Rounded corners (about 24 px), dark translucent navy with soft edges so text
+        stays crisp over the painting, no border, no hard shadows.

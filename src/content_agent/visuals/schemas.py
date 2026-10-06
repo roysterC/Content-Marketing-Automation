@@ -55,9 +55,10 @@ INFOGRAPHIC = {
         },
         "impact_note": _str("One short line saying the figures are illustrative estimates"),
         "scene": _str(
-            "For the painted version: one sentence describing a hero illustration of this "
+            "For the painted version: one sentence suggesting an illustration of this "
             "business and moment, e.g. 'a nail technician mid-manicure while the salon phone "
-            "rings unanswered on the front desk'. Concrete, no text or signs in it"
+            "rings unanswered on the front desk'. Concrete, no text or signs in it; the image "
+            "model may adapt it"
         ),
         "cta": _str("Short call to action, max ~7 words, e.g. 'DM me \"CALLS\" to see it working'"),
     },

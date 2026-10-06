@@ -81,15 +81,37 @@ def test_infographic_prompt_quotes_every_piece_of_copy(style):
 
 
 @pytest.mark.parametrize("style", paint.style_names())
-def test_largest_prompts_fit_in_one_telegram_message(style):
-    # The biggest visuals the schemas allow: 5 steps / 3 outcomes, 5 departments x 4 roles.
+def test_prompt_fixes_the_design_system_but_leaves_layout_free(style):
+    config = paint.load_styles()
+    design = {**config["design"], **config["styles"][style].get("design", {})}
+    prompt = paint.build_prompt("infographic", IDEA, style)
+    for key in paint.DESIGN_KEYS:
+        assert f"{key.capitalize()}: {design[key]}" in prompt
+    assert "You choose the layout" in prompt
+    assert "LAYOUT" not in prompt and "vignette" not in prompt  # no prescribed positions
+
+
+def test_style_overrides_only_the_keys_it_sets():
+    shared = paint.load_styles()["design"]
+    prompt = paint.build_prompt("infographic", IDEA, "watercolour")
+    assert f"Font: {shared['font']}" in prompt and f"Boxes: {shared['boxes']}" not in prompt
+
+
+@pytest.mark.parametrize("style", paint.style_names())
+def test_usual_prompts_fit_in_one_telegram_message(style):
+    # The longest infographic (5 steps, 3 figures) and the team chart the task asks for
+    # (4 departments x 3 roles). The 5 x 4 extreme goes as a file (see below).
+    usual = {
+        **CHART,
+        "departments": [{**d, "roles": d["roles"][:3]} for d in CHART["departments"][:4]],
+    }
     assert len(paint.build_prompt("infographic", IDEA, style)) < tb.TELEGRAM_LIMIT
-    assert len(paint.build_prompt("orgchart", CHART, style)) < tb.TELEGRAM_LIMIT
+    assert len(paint.build_prompt("orgchart", usual, style)) < tb.TELEGRAM_LIMIT
 
 
 def test_orgchart_prompt_has_accent_and_every_card():
     prompt = paint.build_prompt("orgchart", CHART)
-    assert "“Your Barbershop's AI Team”" in prompt and "words “AI Team”\n   in amber" in prompt
+    assert "“Your Barbershop's AI Team”, with “AI Team” highlighted" in prompt
     assert prompt.count("“Missed-Call Hero”") == 20
 
 
@@ -100,11 +122,6 @@ def test_active_style_is_default_and_unknown_style_errors():
     )
     with pytest.raises(ValueError, match="Unknown art style"):
         paint.build_prompt("infographic", IDEA, "crayon")
-
-
-def test_vignette_falls_back_to_icon_name():
-    assert paint.vignette("phone") == "a ringing phone"
-    assert paint.vignette("new-thing") == "new thing"
 
 
 # --- Telegram ---
