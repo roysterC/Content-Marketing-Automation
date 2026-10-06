@@ -106,21 +106,33 @@ def make(
 
 @app.command()
 def guide(
+    request: Annotated[
+        str | None,
+        typer.Argument(help="What and for whom, e.g. 'missed-call text-back for nail salons'"),
+    ] = None,
     rerender: Annotated[
-        bool, typer.Option(help="Re-render the saved guide without new content (no Claude call)")
+        bool, typer.Option(help="Redraw the latest saved guide (no Claude call)")
     ] = False,
     send: Annotated[bool, typer.Option(help="Send the PDF to Telegram for review")] = True,
 ) -> None:
-    """Write and render the free lead-magnet guide set in config/funnel.yaml."""
+    """Write a set-up guide for one automation and business type (PDF)."""
     from content_agent.drafting import guide as g
-    from content_agent.funnel import load_funnel
 
-    result = g.rerender() if rerender else g.make_guide()
+    if rerender:
+        result = g.rerender()
+    elif request:
+        try:
+            topic, sector = g.parse_request(request)
+        except ValueError as e:
+            raise typer.BadParameter(str(e)) from e
+        result = g.make_guide(topic, sector)
+    else:
+        raise typer.BadParameter("give a request, e.g. 'missed-call text-back for nail salons'")
     typer.echo(f"Guide: {result.pdf}")
     if send:
         from content_agent.approval.telegram_bot import send_guide
 
-        send_guide(result.pdf, result.cover, result.factcheck, load_funnel().live)
+        send_guide(result)
 
 
 @app.command()

@@ -1,0 +1,209 @@
+{
+ "sector_label": "Nail salons",
+ "title": "Stop losing bookings to missed calls",
+ "subtitle": "Set up a missed-call text-back in an afternoon, so every caller you can't answer still gets a way to book",
+ "setup_time": "2–3 hours",
+ "effort": "Quick win",
+ "cost": {
+  "headline": "Every unanswered call is a booking someone else gets",
+  "body": "When you're mid-set, the phone rings out. Most callers won't leave a voicemail; they try the next salon. Work out what that costs you with your own numbers.",
+  "rows": [
+   {
+    "label": "Calls you can't answer on a busy day",
+    "example": "6"
+   },
+   {
+    "label": "Share of those who wanted to book",
+    "example": "1 in 2"
+   },
+   {
+    "label": "Share who book elsewhere instead of calling back",
+    "example": "1 in 2"
+   },
+   {
+    "label": "Average booking value",
+    "example": "£35"
+   },
+   {
+    "label": "Busy days a week",
+    "example": "5"
+   }
+  ],
+  "result_label": "Bookings you could be losing each week",
+  "result_example": "~£260",
+  "note": "Example numbers for a small two-chair salon, not a statistic. Fill in yours: even a third of that is worth an afternoon's set-up.",
+  "stats": []
+ },
+ "how": {
+  "headline": "The caller gets a text before they've dialled anyone else",
+  "steps": [
+   {
+    "icon": "phone",
+    "title": "Call goes unanswered",
+    "detail": "You're with a client, so it rings out as normal"
+   },
+   {
+    "icon": "zap",
+    "title": "Text goes out in seconds",
+    "detail": "Your phone system spots the missed call and sends your message"
+   },
+   {
+    "icon": "link",
+    "title": "They tap your booking link",
+    "detail": "Or reply, and you answer between clients"
+   },
+   {
+    "icon": "calendar",
+    "title": "Booked in",
+    "detail": "The appointment lands in your diary with a confirmation"
+   }
+  ],
+  "business_name": "Polished Nail Studio",
+  "conversation": [
+   {
+    "text": "Hi, sorry we missed your call! We're with a client right now.\nBook online in 30 seconds: polished.example/book\nOr reply here and we'll get back to you.",
+    "sender": "business"
+   },
+   {
+    "text": "Do you have anything Saturday for gels?",
+    "sender": "customer"
+   },
+   {
+    "text": "We've got 11:30 or 2pm on Saturday. Want one of those?",
+    "sender": "business"
+   }
+  ],
+  "channel": "Text message",
+  "event_icon": "missed-call",
+  "event": "Missed call · 10:42"
+ },
+ "routes_headline": "Three ways to set it up",
+ "routes": [
+  {
+   "name": "Your booking system's own feature",
+   "recommended": true,
+   "best_for": "your booking system already handles your calls or texts",
+   "how": "Some salon booking systems include missed-call texts or an online-booking link you can send automatically. Check its messages or automations settings first.",
+   "effort": "Quick win",
+   "tools": [
+    "Your booking system",
+    "Its text-message settings"
+   ]
+  },
+  {
+   "name": "Your phone provider's app",
+   "recommended": false,
+   "best_for": "you use a business phone app rather than a mobile",
+   "how": "Many business phone apps can send an automatic text when a call is missed. Turn it on and paste in the message from page 6.",
+   "effort": "Quick win",
+   "tools": [
+    "Business phone app",
+    "UK mobile number"
+   ]
+  },
+  {
+   "name": "A no-code connection",
+   "recommended": false,
+   "best_for": "neither of the above can do it",
+   "how": "Forward your number through a calls-and-texts service, and use a no-code tool to send the text when a call isn't answered.",
+   "effort": "Afternoon",
+   "tools": [
+    "Twilio",
+    "Zapier or Make"
+   ]
+  }
+ ],
+ "steps_headline": "Set it up in 6 steps",
+ "steps": [
+  {
+   "title": "Check what you already pay for",
+   "detail": "Look in your booking system and phone app settings for 'missed call', 'auto-reply' or 'SMS automation'. If it's there, most of the work is done.",
+   "tip": "Ask their support chat: it takes two minutes"
+  },
+  {
+   "title": "Get your booking link",
+   "detail": "Copy the direct link to your online booking page, so people land on the calendar, not your home page.",
+   "tip": ""
+  },
+  {
+   "title": "Write your message",
+   "detail": "Use a template from page 6. Keep it under 160 characters so it sends as one text.",
+   "tip": "Sign off with the salon name, not 'Admin'"
+  },
+  {
+   "title": "Turn on the missed-call trigger",
+   "detail": "Set it to send only for calls you didn't answer, during and after opening hours, with a different message after hours.",
+   "tip": ""
+  },
+  {
+   "title": "Test it from a friend's phone",
+   "detail": "Call, let it ring out, and check the text arrives within a minute and the link opens the booking page.",
+   "tip": "Test after hours too"
+  },
+  {
+   "title": "Reply to replies",
+   "detail": "Some people will text back instead of booking. Check messages between clients, the same way you'd check voicemail.",
+   "tip": ""
+  }
+ ],
+ "templates_headline": "Messages that get people booking",
+ "templates": [
+  {
+   "icon": "missed-call",
+   "when": "Missed call, opening hours",
+   "message": "Hi, sorry we missed you! We're with a client. Book online in 30 secs: [your link] or reply here and we'll text back soon. [Salon name]"
+  },
+  {
+   "icon": "clock",
+   "when": "Missed call, after hours",
+   "message": "Thanks for calling [Salon name]! We're closed right now, but you can book any time here: [your link]. We reopen at [9am]."
+  },
+  {
+   "icon": "message",
+   "when": "They replied but didn't book",
+   "message": "Hi [name], still want that appointment? We have [day + time] free. Reply YES and it's yours."
+  }
+ ],
+ "checks_headline": "Avoid the common slip-ups",
+ "mistakes": [
+  {
+   "title": "Linking to your home page",
+   "detail": "Send people straight to the booking calendar"
+  },
+  {
+   "title": "A text that sounds like a robot",
+   "detail": "Write it the way you'd talk to a client"
+  },
+  {
+   "title": "Texting calls you did answer",
+   "detail": "Make sure it only fires on missed calls"
+  },
+  {
+   "title": "Never checking replies",
+   "detail": "A reply is a warm lead: answer it the same day"
+  }
+ ],
+ "signals": [
+  {
+   "title": "Online bookings go up",
+   "detail": "Compare the month before and after"
+  },
+  {
+   "title": "People mention the text",
+   "detail": "\"I got your message and booked\""
+  },
+  {
+   "title": "Fewer call-backs to make",
+   "detail": "Less time chasing voicemails"
+  },
+  {
+   "title": "Replies get answered same day",
+   "detail": "Count how many turn into bookings"
+  }
+ ],
+ "cta": {
+  "headline": "Want it set up for you?",
+  "body": "I'll set up the missed-call text, connect it to your booking system and test it with you, so it's working by the end of the week."
+ },
+ "works_with": "Your booking system"
+}

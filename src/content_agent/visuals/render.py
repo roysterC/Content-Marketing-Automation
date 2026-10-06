@@ -5,12 +5,13 @@ headless Chromium turns them into the PDF LinkedIn takes for document posts.
 """
 
 import logging
+import re
 from pathlib import Path
 
 import qrcode
 import qrcode.image.svg
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from markupsafe import Markup
+from markupsafe import Markup, escape
 from playwright.sync_api import sync_playwright
 from sqlalchemy import select
 
@@ -49,20 +50,37 @@ def qr_svg(url: str) -> Markup:
     return Markup(img.to_string(encoding="unicode"))
 
 
-def render_guide_html(guide: dict, booking_url: str = "") -> str:
+# The setup guide's pages, in template order, for text-fit messages.
+GUIDE_PAGES = [
+    "cover",
+    "cost page",
+    "how it works page",
+    "routes page",
+    "set-up steps page",
+    "message templates page",
+    "mistakes and signs page",
+    "call to action page",
+]
+
+
+def highlight(text: str) -> Markup:
+    """Escape text, then show [placeholders] as highlighted parts to swap."""
+    return Markup(re.sub(r"\[([^\]]+)\]", r"<b>\1</b>", str(escape(text))))
+
+
+_env.filters["highlight"] = highlight
+
+
+def render_guide_html(guide: dict, checked: str, booking_url: str = "") -> str:
+    """`checked` is when the tools were checked on the web, e.g. 'October 2026'."""
     return _env.get_template("guide.html").render(
         g=guide,
+        checked=checked,
         author=AUTHOR,
         tagline=TAGLINE,
         booking_url=booking_url,
         qr_svg=qr_svg(booking_url) if booking_url else "",
     )
-
-
-def guide_page_labels(guide: dict) -> list[str]:
-    """Names for the guide's pages, in order, for text-fit messages."""
-    autos = [f"automation {i} ({a['name']})" for i, a in enumerate(guide["automations"], 1)]
-    return ["cover", "intro", *autos, "where to start", "call to action"]
 
 
 def render_guide(html: str, out_stem: Path) -> tuple[Path, list[float]]:

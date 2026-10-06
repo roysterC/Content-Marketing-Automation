@@ -21,7 +21,7 @@ def _settings(**kw):
 def test_shipped_settings_load_and_match_registered_formats():
     s = generate.load_settings()
     assert s.posts_per_day == 1
-    assert s.format_weights == {"idea": 67, "team": 23, "offer": 10}
+    assert s.format_weights == {"idea": 75, "team": 25}
     assert set(s.format_weights) <= set(FORMATS)
     assert s.sector_weights["nail salons"] > s.sector_weights["barbers"]
 
@@ -64,14 +64,5 @@ def test_daily_makes_posts_per_day_packages(monkeypatch):
 
 def test_every_format_task_takes_sector_and_recent():
     for fmt in FORMATS.values():
-        prompt = fmt.task.format(sector="barbers", recent="  - x", guide_outline="", keyword="G")
+        prompt = fmt.task.format(sector="barbers", recent="  - x")
         assert "barbers" in prompt
-
-
-def test_offer_sits_out_until_the_guide_is_live():
-    s = _settings(format_weights={"idea": 67, "team": 23, "offer": 10})
-    rng = random.Random(3)
-    assert "offer" not in {generate.pick_format(s, rng).name for _ in range(500)}
-    picks = [generate.pick_format(s, rng, guide_live=True).name for _ in range(4000)]
-    assert 0.07 < picks.count("offer") / len(picks) < 0.13
-    assert 0.72 < picks.count("idea") / (picks.count("idea") + picks.count("team")) < 0.78

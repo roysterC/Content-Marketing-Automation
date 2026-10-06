@@ -1,29 +1,12 @@
-# Lead funnel settings (Phase 3). Posts point people at a free guide; Roy sends it by
-# hand to anyone who comments the keyword (no DM automation yet, by choice).
+# Lead funnel settings (Phase 3). Each post comes with its own free set-up guide (PDF);
+# Roy sends it by hand to anyone who comments the keyword (no DM automation, by choice).
 #
 # Edit this file in the repo (GitHub) and merge to main, not on the VPS: every deploy
 # resets the VPS copy to what's in the repo.
 
-guide:
-  # What `content-agent guide` writes about.
-  title: "The 5 automations every salon should run"
-  subtitle: "Stop losing bookings to missed calls, with the time each one could save"
-  sector: salons
-  # Daily posts for these business types promote the guide. Other posts don't (a salon
-  # guide is no use to a plumber).
-  for_sectors:
-    - nail salons
-    - hair salons
-    - barbers
-    - beauty clinics
-    - aesthetics clinics
-  # Paste the guide's share link here once you've uploaded the PDF (e.g. Google Drive,
-  # "Anyone with the link can view"). Until this is set, posts don't mention the guide.
-  url: ""
-
-# Word people comment on Facebook to get the guide.
+# Word people comment to get the guide.
 keyword: GUIDE
 
-# Your booking page, e.g. a Cal.com "20-min automation chat" link. Shown on the guide's
-# last page (with a QR code) and in the DM you send. Leave empty until it exists.
+# Your booking page, e.g. a Cal.com "20-min automation chat" link. Shown on each guide's
+# last page with a QR code. Leave empty until it exists.
 booking_url: ""
