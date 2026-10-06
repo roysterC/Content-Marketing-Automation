@@ -3,7 +3,17 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, create_engine
+from sqlalchemy import (
+    JSON,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+    inspect,
+    text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 from content_agent.config import get_settings
@@ -61,9 +71,12 @@ class Draft(Base):
     carousel_path: Mapped[str | None] = mapped_column(String(500))
     factcheck: Mapped[dict | None] = mapped_column(JSON)
 
-    # pending -> sent -> approved | rejected   (an edit puts it back to pending)
+    # pending -> sent -> approved -> posted, or rejected (an edit puts it back to sent)
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)
     telegram_message_id: Mapped[int | None] = mapped_column(Integer)
+    # Filled in when Roy taps "Posted" in Telegram (Phase 4 analytics reads these).
+    posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    post_url: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_now, onupdate=_now
@@ -85,8 +98,29 @@ def get_engine():
     return _engine
 
 
+def _add_missing_columns(engine) -> None:
+    """Tiny migration: add columns that exist in the models but not yet in the database.
+    create_all() only creates missing tables, so new nullable columns on existing tables
+    (e.g. drafts.posted_at) would otherwise be missing on the VPS."""
+    inspector = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not inspector.has_table(table.name):
+                continue
+            existing = {c["name"] for c in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                col_type = column.type.compile(dialect=engine.dialect)
+                conn.execute(
+                    text(f'ALTER TABLE {table.name} ADD COLUMN "{column.name}" {col_type}')
+                )
+
+
 def init_db() -> None:
-    Base.metadata.create_all(get_engine())
+    engine = get_engine()
+    Base.metadata.create_all(engine)
+    _add_missing_columns(engine)
 
 
 def session() -> Session:

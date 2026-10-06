@@ -121,6 +121,14 @@ def review() -> None:
 
 
 @app.command()
+def remind() -> None:
+    """Nudge in Telegram about approved drafts not yet marked posted (weekday cron)."""
+    from content_agent.approval.telegram_bot import send_reminders
+
+    typer.echo(f"Reminded about {send_reminders()} drafts")
+
+
+@app.command()
 def bot() -> None:
     """Run the Telegram bot that handles Approve / Edit / Reject (long-running)."""
     from content_agent.approval.telegram_bot import run_bot

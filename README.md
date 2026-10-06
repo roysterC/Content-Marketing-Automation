@@ -54,6 +54,7 @@ Telegram bot setup:
 | `content-agent daily` | The morning run (what the cron calls): picks a format by the weights in `config/formats.yaml`, builds `posts_per_day` packages and sends them to Telegram |
 | `content-agent make idea --sector "nail salons"` | One package in a specific format (`idea` or `team`), on demand. Leave out `--sector` for a weighted random business type |
 | `content-agent brief notes.txt --pillar proof` | Draft a post from your own notes (case studies, offers). Only facts in your notes are used |
+| `content-agent remind` | Remind you in Telegram about approved drafts not yet marked posted (cron, 12:00 weekdays) |
 | `content-agent review` | Send any pending drafts to Telegram with Approve / Edit / Reject buttons |
 | `content-agent bot` | Long-running process that handles the button presses, edits and commands |
 
@@ -76,9 +77,21 @@ Every visual goes through a text-fit check. The templates shrink text to fit the
 and any visual that needed shrinking below 85% gets its wording shortened by Claude in one
 quick extra call, then re-rendered, so text stays readable on a phone.
 
-How approval works: **Approve** marks the draft as ready to post. **Reject** discards it.
-**Edit** asks you to reply with the new text, then sends the updated draft back for approval.
-The fact-check results appear on each draft. Nothing is auto-rejected, so the final call is yours.
+How approval works: **Edit** asks you to reply with the new text, then sends the updated
+draft back for approval. **Reject** discards it. The fact-check results appear on each draft.
+Nothing is auto-rejected, so the final call is yours.
+
+**Approve** sends a posting kit. You post by hand from your phone, in about 2–3 minutes:
+1. A short checklist.
+2. The post text on its own, so long-press → Copy gets exactly the text.
+3. The file to attach. LinkedIn gets the carousel PDF, with the document title LinkedIn
+   asks for in its caption. Facebook gets the infographic.
+4. LinkedIn only: the first comment on its own.
+5. A **✅ Posted** button. Tap it once the post is live, then optionally reply with the
+   post's link. That records what went out and when, for the Phase 4 analytics.
+
+At 12:00 on weekdays the bot reminds you about anything approved but not yet marked
+posted. Each reminder has a **🔁 Resend kit** button.
 
 ## Running it on a VPS
 
@@ -96,9 +109,9 @@ It finishes by printing the steps that need you: `claude setup-token` and the Te
 It's safe to re-run. What it sets up:
 
 - a systemd service, `content-agent-bot`, that keeps the Telegram buttons working
-- a cron job that runs `content-agent daily` on weekdays at 07:00 server time, so drafts
-  arrive before the working day. Every deploy re-applies it, so changes to it ship
-  automatically.
+- cron jobs: `content-agent daily` at 07:00 on weekdays, so drafts arrive before the
+  working day, and `content-agent remind` at 12:00. Every deploy re-applies them, so
+  changes ship automatically.
 
 ### Automatic deploys from GitHub
 
