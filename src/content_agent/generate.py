@@ -98,14 +98,14 @@ def _store_and_render(db, fmt: Format, sector: str, result: dict, checks: dict) 
     db.flush()
 
     linkedin = drafts[0]
-    render_poster_fitted(
+    visual = render_poster_fitted(
         fmt.render_visual,
         result[fmt.visual_key],
         fmt.visual_schema,
         poster_path(linkedin.id),
         fmt.visual_key,
     )
-    share_poster(drafts)
+    share_poster(drafts, fmt.visual_key, visual)
     path, linkedin.carousel = render_carousel_fitted(
         result["carousel"], OUTPUT_DIR / "carousels" / f"draft-{linkedin.id}"
     )

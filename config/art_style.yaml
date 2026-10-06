@@ -1,0 +1,62 @@
+# Art style for the painted images Roy makes in the Gemini app (Nano Banana).
+#
+# Every Telegram image prompt repeats the active style word for word, so every post
+# looks like it came from the same illustrator. Change it on purpose, not per post:
+# a new wording means a new look across the feed.
+#
+# Try the styles side by side with /paint in Telegram, e.g. `/paint watercolour`, or
+# on the command line with `content-agent paint <draft id> --style watercolour`.
+# Once you have a favourite image, attach it in Gemini as a style reference with
+# every prompt; that's the strongest way to keep the look consistent.
+
+active: gouache
+
+# Shared by every style: brand colours, typography and the rules that keep text exact.
+palette: >-
+  deep navy #0f1b2d, warm amber #f2a541 for highlights and key numbers, soft cream
+  #f4f1ea, mint green #7fd1ae for good outcomes, muted slate blue #a9b4c6 for
+  secondary text. No other strong colours.
+
+typography: >-
+  All text in a clean, bold, modern sans-serif (like Inter), set flat and crisp on top
+  of the artwork: straight, sharp and easy to read on a phone, never painted, curved or
+  hand-lettered.
+
+text_rules: >-
+  Reproduce every text in “curly quotes” exactly (spelling, capitals, punctuation, numbers), once
+  each. Add no other words, numbers, logos or watermarks anywhere, including on objects.
+
+styles:
+  gouache:
+    name: Editorial gouache
+    look: >-
+      Hand-painted editorial illustration in matte gouache, like a premium business
+      magazine feature: visible but controlled brush strokes, soft paper grain, simple
+      shapes with gentle painted shading, friendly rounded forms. Simple stylised people
+      with minimal faces. Warm, calm and confident. Not cartoonish, glossy 3D,
+      photographic or flat vector clip art.
+    background: >-
+      Deep navy with subtle brush texture and a soft amber glow top right. Text sits on
+      slightly lighter navy cards with softly painted edges.
+
+  watercolour:
+    name: Watercolour and ink
+    look: >-
+      Loose watercolour washes with fine, confident ink linework, like a well-designed
+      illustrated guide: soft colour bleeds, visible paper texture, plenty of white
+      space. Simple stylised people with minimal faces. Light, friendly and tidy. Not
+      cartoonish, 3D, photographic or flat vector clip art.
+    background: >-
+      Warm off-white watercolour paper. Text in deep navy, key numbers in amber, on pale
+      cream cards with a thin navy ink outline.
+
+  painterly:
+    name: Painterly digital
+    look: >-
+      Rich painterly digital art with visible oil-like brush strokes, soft cinematic
+      lighting and warm highlights, like a high-end editorial cover: simple, readable
+      shapes and a clear focal point. Simple stylised people with minimal faces. Not
+      cartoonish, plastic 3D, photographic or flat vector clip art.
+    background: >-
+      Deep navy with warm amber light from the top right. Text sits on dark translucent
+      navy cards with soft edges so it stays crisp.

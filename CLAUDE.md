@@ -28,7 +28,7 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 2. **Draft** — Claude writes the whole package: LinkedIn + Facebook drafts, the format's
    single-image visual and a carousel, using a brand-voice file + 10–20 example posts.
    One package per morning (lower volume, higher depth).
-3. **Visuals** — primarily HTML templates rendered to PNG/PDF via Playwright (branded, consistent carousels/diagrams). Image model only for occasional hero images.
+3. **Visuals** — primarily HTML templates rendered to PNG/PDF via Playwright (branded, consistent carousels/diagrams). For a painted look, every package also gets a Gemini (Nano Banana) prompt for its single-image visual: Roy makes the image in the free Gemini app and sends it back to the bot, which proofreads its text against the approved copy (`visuals/paint.py`, art style in `config/art_style.yaml`).
 4. **Human review gate** — drafts sent to Slack or Telegram with Approve / Edit / Reject. Nothing publishes without approval.
 5. **Publish** — Roy posts by hand from a Telegram **posting kit** (no paid scheduler: Roy
    ruled out any cost). Direct publishing through the free official APIs (Facebook Page via
@@ -83,6 +83,9 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
   `/pending`), `brief` for Roy's own material, weekday 07:00 cron, auto-deploy from `main`.
   Still open: Roy's example posts and brand-voice edits; SQLite (not Postgres) is fine for
   now. Next format candidate: "industry problem" with its own poster.
+  Painted images: semi-manual via the free Gemini app (prompt in Telegram → Roy replies
+  with the image → Claude text check → used in the kit). Roy still to pick the art style
+  (`gouache` / `watercolour` / `painterly`, samples in `docs/painted-style-samples.md`).
 - **Phase 2: complete (manual posting).** Approve → copyable post text, attachment
   (carousel PDF with its LinkedIn document title, or the infographic), first comment, and a
   ✅ Posted button (records `posted_at` and an optional `post_url`); 12:00 weekday
@@ -104,6 +107,10 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 
 - Publishing: **no paid scheduler; Roy posts manually from the posting kit.** API automation
   deferred
+
+- Painted images: **Gemini app by hand (free), not an image API.** The app has no API and
+  scripting it breaks Google's terms; the paid API (~£2–4/month for Nano Banana 2) is the
+  upgrade path if the manual step becomes a chore. Research: `docs/research/infographic-image-tools.md`
 
 ## Open decisions
 - If API publishing is revisited: whether the LinkedIn first comment may be posted through

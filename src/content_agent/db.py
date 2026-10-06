@@ -70,6 +70,11 @@ class Draft(Base):
     carousel: Mapped[list | None] = mapped_column(JSON)  # list of {title, body} slides
     carousel_path: Mapped[str | None] = mapped_column(String(500))
     factcheck: Mapped[dict | None] = mapped_column(JSON)
+    # The single-image visual's content, {"kind": "infographic" | "orgchart", "data": {...}},
+    # kept so the painted-image prompt can be rebuilt (e.g. in another art style).
+    visual: Mapped[dict | None] = mapped_column(JSON)
+    # Painted image Roy made in Gemini and sent back to the bot (shared by the LI/FB pair).
+    painted_path: Mapped[str | None] = mapped_column(String(500))
 
     # pending -> sent -> approved -> posted, or rejected (an edit puts it back to sent)
     status: Mapped[str] = mapped_column(String(20), default="pending", index=True)

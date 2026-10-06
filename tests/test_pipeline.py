@@ -143,5 +143,6 @@ def test_share_poster_gives_facebook_draft_the_same_image(monkeypatch, tmp_path)
     li, fb = Draft(id=10), Draft(id=11)
     render.poster_path(10).parent.mkdir(parents=True)
     render.poster_path(10).write_bytes(b"png")
-    share_poster([li, fb])
+    share_poster([li, fb], "infographic", {"title": "T"})
     assert render.poster_path(11).read_bytes() == b"png"
+    assert li.visual == fb.visual == {"kind": "infographic", "data": {"title": "T"}}

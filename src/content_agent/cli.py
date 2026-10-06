@@ -129,6 +129,25 @@ def remind() -> None:
 
 
 @app.command()
+def paint(
+    draft_id: Annotated[int, typer.Argument(help="Draft whose visual to paint")],
+    style: Annotated[
+        str | None, typer.Option(help="Art style from config/art_style.yaml (default: active)")
+    ] = None,
+) -> None:
+    """Print the Gemini (Nano Banana) prompt for a draft's painted image."""
+    from content_agent.approval.telegram_bot import paint_prompt
+    from content_agent.db import Draft, session
+
+    with session() as db:
+        d = db.get(Draft, draft_id)
+        prompt = paint_prompt(d, style) if d else None
+    if not prompt:
+        raise typer.BadParameter(f"draft {draft_id} has no visual to paint")
+    typer.echo(prompt)
+
+
+@app.command()
 def bot() -> None:
     """Run the Telegram bot that handles Approve / Edit / Reject (long-running)."""
     from content_agent.approval.telegram_bot import run_bot

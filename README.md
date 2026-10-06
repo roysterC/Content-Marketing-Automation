@@ -54,6 +54,7 @@ Telegram bot setup:
 | `content-agent daily` | The morning run (what the cron calls): picks a format by the weights in `config/formats.yaml`, builds `posts_per_day` packages and sends them to Telegram |
 | `content-agent make idea --sector "nail salons"` | One package in a specific format (`idea` or `team`), on demand. Leave out `--sector` for a weighted random business type |
 | `content-agent brief notes.txt --pillar proof` | Draft a post from your own notes (case studies, offers). Only facts in your notes are used |
+| `content-agent paint 12 --style watercolour` | Print the Gemini prompt for draft 12's painted image, optionally in another art style |
 | `content-agent remind` | Remind you in Telegram about approved drafts not yet marked posted (cron, 12:00 weekdays) |
 | `content-agent review` | Send any pending drafts to Telegram with Approve / Edit / Reject buttons |
 | `content-agent bot` | Long-running process that handles the button presses, edits and commands |
@@ -65,6 +66,8 @@ From your phone, the bot takes:
 - `/daily`: today's random format.
 - `/idea` or `/idea dog groomers`, `/team` or `/team barbers`: a specific format.
 - `/pending`: resend drafts you haven't reviewed.
+- `/paint`, `/paint 12` or `/paint watercolour`: resend the Gemini prompt for the latest
+  draft (or draft 12), optionally in another art style.
 
 Each package takes a few minutes, and the bot keeps handling your buttons meanwhile.
 
@@ -76,6 +79,30 @@ automatically.
 Every visual goes through a text-fit check. The templates shrink text to fit the canvas,
 and any visual that needed shrinking below 85% gets its wording shortened by Claude in one
 quick extra call, then re-rendered, so text stays readable on a phone.
+
+### Painted images (Gemini, free)
+
+The HTML infographic is clean but flat. For a painted look, each package also comes with
+a paste-ready prompt for the Gemini app, where Nano Banana image generation is free (it
+has no free API, and scripting the app would break Google's terms, so this step is
+manual):
+1. Under the LinkedIn draft, the bot sends the steps, then the prompt on its own. Copy it
+   into the Gemini app and send.
+2. Reply to either message with the image Gemini makes, sent as a file so Telegram doesn't
+   compress it. An image sent without a reply goes to the latest draft.
+3. The bot saves it for the LinkedIn and Facebook drafts, and Claude proofreads it against
+   the approved copy: misspellings, missing text, or any words or numbers the image model
+   added. The result comes back as ✅ or ⚠️ with the problems listed.
+4. The posting kit then uses it: the Facebook kit attaches it instead of the HTML
+   infographic, and the LinkedIn kit offers it as an alternative to the carousel PDF.
+
+The prompt carries the exact approved text, so nothing new gets past the fact-check. The
+art style lives in `config/art_style.yaml` and is repeated word for word in every prompt,
+so every post looks like the same illustrator. It has three styles to compare
+(`gouache`, `watercolour`, `painterly`) and an `active` one. Sample prompts for all three
+are in [`docs/painted-style-samples.md`](docs/painted-style-samples.md). Once you have an
+image you like, attach it in Gemini as a style reference with each prompt: that's the
+strongest way to keep the look consistent.
 
 How approval works: **Edit** asks you to reply with the new text, then sends the updated
 draft back for approval. **Reject** discards it. The fact-check results appear on each draft.

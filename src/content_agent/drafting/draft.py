@@ -213,13 +213,15 @@ def _save(db, result: dict, pillar: str, item: Item | None, checks: dict) -> lis
     return drafts
 
 
-def share_poster(drafts: list[Draft]) -> None:
-    """Give every draft in a group the image rendered for the LinkedIn draft."""
+def share_poster(drafts: list[Draft], kind: str, visual: dict) -> None:
+    """Give every draft in a group the image rendered for the LinkedIn draft, and the
+    visual's content (for the painted-image prompt)."""
     from content_agent.visuals.render import poster_path
 
     source = poster_path(drafts[0].id)
-    for d in drafts[1:]:
-        if source.exists():
+    for d in drafts:
+        d.visual = {"kind": kind, "data": visual}
+        if d is not drafts[0] and source.exists():
             shutil.copyfile(source, poster_path(d.id))
 
 
@@ -228,11 +230,11 @@ def render_infographic(drafts: list[Draft], result: dict) -> None:
     from content_agent.drafting.fit import render_poster_fitted
     from content_agent.visuals.render import poster_path, render_idea_html
 
-    render_poster_fitted(
+    visual = render_poster_fitted(
         render_idea_html, result["infographic"], INFOGRAPHIC, poster_path(drafts[0].id),
         "infographic",
     )  # fmt: skip
-    share_poster(drafts)
+    share_poster(drafts, "infographic", visual)
 
 
 def _generate(prompt: str, source_text: str) -> tuple[dict, dict]:
@@ -261,6 +263,7 @@ def draft_top_items(limit: int = 3) -> int:
             item.status = "drafted"
             db.commit()
             render_infographic(drafts, result)
+            db.commit()
             log.info("Drafted item %d (%s)", item.id, item.title[:60])
         return len(items)
 
@@ -274,4 +277,5 @@ def draft_from_brief(brief: str, pillar: str, business_type: str) -> list[int]:
         drafts = _save(db, result, pillar, None, checks)
         db.commit()
         render_infographic(drafts, result)
+        db.commit()
         return [d.id for d in drafts]

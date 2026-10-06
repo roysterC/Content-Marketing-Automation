@@ -9,9 +9,11 @@ Two backends, chosen by LLM_BACKEND:
   limits and access to API-only features (server-side refusal fallback, cache control).
 """
 
+import base64
 import json
 import logging
 import os
+import shutil
 import subprocess
 import tempfile
 from functools import lru_cache
@@ -40,6 +42,7 @@ def ask_json(
     effort: str = "medium",
     max_tokens: int = 16000,
     web: bool = False,
+    images: list[Path] | None = None,
 ) -> dict:
     """Send one request and return the JSON object Claude produced.
 
@@ -48,26 +51,32 @@ def ask_json(
 
     web=True lets Claude search and read web pages before answering (claude_code
     backend only; the api backend answers from Claude's own knowledge).
+
+    images: PNG, JPEG or WebP files for Claude to look at alongside the prompt.
     """
+    images = images or []
     if get_settings().llm_backend == "api":
-        return _ask_api(system, prompt, schema, effort, max_tokens)
-    return _ask_claude_code(system, prompt, schema, effort, web)
+        return _ask_api(system, prompt, schema, effort, max_tokens, images)
+    return _ask_claude_code(system, prompt, schema, effort, web, images)
 
 
 # --- claude_code backend ---
 
 
 WEB_TOOLS = "WebSearch,WebFetch"
+READ_TOOL = "Read"
 
 
 def claude_code_command(
-    schema: dict, system_file: Path, effort: str, web: bool = False
+    schema: dict, system_file: Path, effort: str, web: bool = False, read: bool = False
 ) -> list[str]:
     s = get_settings()
     # Text-in/JSON-out by default: no file, shell, web or MCP tools. With web=True,
-    # only web search/fetch are enabled (and pre-approved, since nobody is there to
-    # answer a permission prompt).
-    tools = ["--tools", WEB_TOOLS, "--allowedTools", WEB_TOOLS] if web else ["--tools", ""]
+    # only web search/fetch are enabled; with read=True, only Read (to look at images
+    # copied into the call's temporary directory). Enabled tools are pre-approved,
+    # since nobody is there to answer a permission prompt.
+    enabled = ",".join(t for t, on in ((WEB_TOOLS, web), (READ_TOOL, read)) if on)
+    tools = ["--tools", enabled, "--allowedTools", enabled] if enabled else ["--tools", ""]
     return [
         s.claude_cli,
         "-p",
@@ -82,7 +91,9 @@ def claude_code_command(
     ]  # fmt: skip
 
 
-def _ask_claude_code(system: str, prompt: str, schema: dict, effort: str, web: bool) -> dict:
+def _ask_claude_code(
+    system: str, prompt: str, schema: dict, effort: str, web: bool, images: list[Path]
+) -> dict:
     # ANTHROPIC_API_KEY outranks the subscription login in `claude -p`, so drop it to
     # make sure this backend really runs on the plan.
     env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
@@ -94,9 +105,16 @@ def _ask_claude_code(system: str, prompt: str, schema: dict, effort: str, web: b
     with tempfile.TemporaryDirectory(prefix="content-agent-") as tmp:
         system_file = Path(tmp) / "system.md"
         system_file.write_text(system)
+        if images:
+            copies = []
+            for i, image in enumerate(images, 1):
+                copy = Path(tmp) / f"image-{i}{image.suffix.lower()}"
+                shutil.copyfile(image, copy)
+                copies.append(str(copy))
+            prompt += "\n\nImages (open each with the Read tool):\n" + "\n".join(copies)
         try:
             proc = subprocess.run(
-                claude_code_command(schema, system_file, effort, web),
+                claude_code_command(schema, system_file, effort, web, read=bool(images)),
                 input=prompt,
                 capture_output=True,
                 text=True,
@@ -141,14 +159,31 @@ def _client():
     return anthropic.Anthropic()
 
 
-def _ask_api(system: str, prompt: str, schema: dict, effort: str, max_tokens: int) -> dict:
+MEDIA_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+}
+
+
+def _image_block(path: Path) -> dict:
+    data = base64.standard_b64encode(path.read_bytes()).decode("utf-8")
+    media_type = MEDIA_TYPES[path.suffix.lower()]
+    return {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": data}}
+
+
+def _ask_api(
+    system: str, prompt: str, schema: dict, effort: str, max_tokens: int, images: list[Path]
+) -> dict:
+    content = [*(_image_block(p) for p in images), {"type": "text", "text": prompt}]
     response = _client().beta.messages.create(
         model=get_settings().claude_model,
         max_tokens=max_tokens,
         betas=[FALLBACK_BETA],
         fallbacks="default",
         system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": content}],
         output_config={
             "effort": effort,
             "format": {"type": "json_schema", "schema": schema},

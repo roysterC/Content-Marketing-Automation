@@ -6,6 +6,10 @@ single long-press -> Copy), then a "Posted" button. Roy posts by hand; tapping P
 records it (and optionally the post's link) for Phase 4 analytics. Nothing is published
 from here.
 
+Painted images: each package also gets a paste-ready prompt for the Gemini app (free
+there, no API). Roy sends the image Gemini makes back to the bot; it's proofread against
+the approved copy and used in the posting kit instead of the HTML infographic.
+
 Entry points:
 - send_pending(): push any pending drafts to the chat, then exit (safe to run from cron).
 - send_reminders(): nudge about approved drafts not yet marked posted (cron).
@@ -29,9 +33,11 @@ from telegram.ext import (
     filters,
 )
 
-from content_agent.config import get_settings
+from content_agent.config import OUTPUT_DIR, get_settings
 from content_agent.db import Draft, session
 from content_agent.formats import FORMATS
+from content_agent.llm import LLMError
+from content_agent.visuals.paint import build_prompt, style_names
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +46,16 @@ EDIT_PROMPT = "Edit draft #{id}: reply to this message with the full new post te
 EDIT_RE = re.compile(r"^Edit draft #(\d+):")
 LINK_PROMPT = "Posted #{id}. Reply to this message with the post's link (optional)."
 LINK_RE = re.compile(r"^Posted #(\d+)\.")
+PAINT_STEPS = (
+    "🎨 Painted image for #{id} (optional, free, about a minute)\n"
+    "1. Copy the next message into the Gemini app and send it.\n"
+    "2. Save the image Gemini makes. Not quite right? Ask Gemini to fix it.\n"
+    "3. Reply to this message with the image, sent as a file to keep full quality.\n"
+    "I'll check its text and use it in the posting kit."
+)
+PAINT_RE = re.compile(r"^🎨 Painted image for #(\d+)")
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".webp")
+RECENT_PROMPTS = 20  # drafts searched when Roy replies to a prompt message itself
 
 
 def _settings():
@@ -93,6 +109,36 @@ def _image(d: Draft) -> Path | None:
     return None
 
 
+def _painted(d: Draft) -> Path | None:
+    return Path(d.painted_path) if d.painted_path and Path(d.painted_path).exists() else None
+
+
+def paint_prompt(d: Draft, style: str | None = None) -> str | None:
+    """The Gemini prompt for a draft's single-image visual, or None if it has none."""
+    return build_prompt(d.visual["kind"], d.visual["data"], style) if d.visual else None
+
+
+def painted_file(group_id: str, suffix: str) -> Path:
+    return OUTPUT_DIR / "painted" / f"{group_id}{suffix}"
+
+
+async def send_paint_prompt(bot: Bot, chat_id, d: Draft, style: str | None = None) -> None:
+    """The steps, then the prompt on its own so long-press -> Copy gets exactly it."""
+    prompt = paint_prompt(d, style)
+    if not prompt:
+        return
+    await bot.send_message(chat_id, PAINT_STEPS.format(id=d.id))
+    if len(prompt) <= TELEGRAM_LIMIT:
+        await bot.send_message(chat_id, prompt)
+    else:  # an unusually big visual: too long for one message, so send it as a file
+        await bot.send_document(
+            chat_id,
+            prompt.encode(),
+            filename=f"gemini-prompt-{d.id}.txt",
+            caption="The prompt is too long for one message: copy it from this file.",
+        )
+
+
 def _carousel(d: Draft) -> Path | None:
     return Path(d.carousel_path) if d.carousel_path and Path(d.carousel_path).exists() else None
 
@@ -131,7 +177,11 @@ async def send_kit(bot: Bot, chat_id, d: Draft) -> None:
         await bot.send_message(chat_id, d.body)
         if carousel:
             await bot.send_document(chat_id, carousel, caption=document_title(d))
-        elif image:
+            if painted := _painted(d):
+                await bot.send_document(
+                    chat_id, painted, caption="Or post this painted image instead of the PDF"
+                )
+        elif image := _painted(d) or image:
             await bot.send_document(chat_id, image)
         if d.first_comment:
             await bot.send_message(chat_id, d.first_comment)
@@ -142,14 +192,14 @@ async def send_kit(bot: Bot, chat_id, d: Draft) -> None:
             "2. Add the image below.",
         )
         await bot.send_message(chat_id, d.body)
-        if image := _image(d):
+        if image := _painted(d) or _image(d):
             await bot.send_document(chat_id, image)
     await bot.send_message(
         chat_id, f"Tap Posted once #{d.id} is live.", reply_markup=posted_keyboard(d.id)
     )
 
 
-async def _send_draft(bot: Bot, chat_id: str, d: Draft) -> int:
+async def _send_draft(bot: Bot, chat_id: str, d: Draft, with_prompt: bool = True) -> int:
     if image := _image(d):
         # As a document, not a photo: Telegram recompresses photos, and this is the
         # full-quality PNG to upload to LinkedIn/Facebook.
@@ -157,6 +207,9 @@ async def _send_draft(bot: Bot, chat_id: str, d: Draft) -> int:
     if carousel := _carousel(d):
         await bot.send_document(chat_id, carousel, caption=f"Carousel for draft #{d.id}")
     msg = await bot.send_message(chat_id, format_draft(d), reply_markup=keyboard(d.id))
+    # One prompt per LinkedIn/Facebook pair: they share the image.
+    if with_prompt and d.platform == "linkedin" and not _painted(d):
+        await send_paint_prompt(bot, chat_id, d)
     return msg.message_id
 
 
@@ -276,7 +329,7 @@ async def on_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         d.body = msg.text
         d.hook = "\n".join(msg.text.strip().splitlines()[:2])
         d.status = "sent"
-        d.telegram_message_id = await _send_draft(context.bot, msg.chat_id, d)
+        d.telegram_message_id = await _send_draft(context.bot, msg.chat_id, d, with_prompt=False)
         db.commit()
 
 
@@ -323,6 +376,102 @@ def _make(name: str):
     return run
 
 
+def _latest_with_visual(db) -> Draft | None:
+    return db.scalars(
+        select(Draft)
+        .where(Draft.platform == "linkedin", Draft.visual.is_not(None))
+        .order_by(Draft.id.desc())
+        .limit(1)
+    ).first()
+
+
+def paint_target(db, replied_text: str | None) -> Draft | None:
+    """Which draft an incoming painted image is for: the one named in the steps message
+    it replies to, or whose prompt it replies to, else the latest draft with a visual."""
+    if replied_text and (m := PAINT_RE.match(replied_text)):
+        return db.get(Draft, int(m.group(1)))
+    if replied_text:
+        recent = db.scalars(
+            select(Draft)
+            .where(Draft.platform == "linkedin", Draft.visual.is_not(None))
+            .order_by(Draft.id.desc())
+            .limit(RECENT_PROMPTS)
+        )
+        for d in recent:
+            if any(paint_prompt(d, s).strip() == replied_text.strip()
+                   for s in style_names()):  # fmt: skip
+                return d
+    return _latest_with_visual(db)
+
+
+async def on_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Roy sent a painted image: save it for the draft pair, then proofread its text."""
+    from content_agent.drafting.imagecheck import check_image, format_check
+
+    msg = update.message
+    replied = msg.reply_to_message
+    if msg.photo:
+        file_id, suffix, compressed = msg.photo[-1].file_id, ".jpg", True
+    else:
+        suffix = Path((msg.document.file_name or "").lower()).suffix
+        if suffix not in IMAGE_SUFFIXES:
+            suffix = ".png"
+        file_id, compressed = msg.document.file_id, False
+
+    with session() as db:
+        d = paint_target(db, (replied.text if replied else None))
+        if d is None:
+            await msg.reply_text("No draft with a visual to attach this image to.")
+            return
+        path = painted_file(d.group_id, suffix)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tg_file = await context.bot.get_file(file_id)
+        await tg_file.download_to_drive(path)
+        pair = list(db.scalars(select(Draft).where(Draft.group_id == d.group_id)))
+        for p in pair:
+            p.painted_path = str(path)
+        db.commit()
+        prompt = paint_prompt(d)
+        ids = " and ".join(f"#{p.id}" for p in sorted(pair, key=lambda p: p.id))
+        notes = [f"🖼️ Saved as the image for {ids}. Checking its text…"]
+        if compressed:
+            notes.append("It came as a photo, so Telegram compressed it. Send it as a file "
+                         "for full quality.")  # fmt: skip
+        if any(p.status == "approved" for p in pair):
+            notes.append("Already approved: tap 🔁 Resend kit to get a kit with it.")
+        await msg.reply_text("\n".join(notes))
+
+    try:
+        result = await asyncio.to_thread(check_image, path, prompt)
+    except (LLMError, OSError) as e:
+        log.exception("Image check failed")
+        await msg.reply_text(f"Couldn't check the text ({e}). Have a close look yourself."[:500])
+        return
+    await msg.reply_text(format_check(result))
+
+
+async def on_paint(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/paint [draft id] [style]: (re)send a draft's Gemini prompt, e.g. in another style."""
+    draft_id = next((int(a.lstrip("#")) for a in context.args if a.lstrip("#").isdigit()), None)
+    style = next((a.lower() for a in context.args if not a.lstrip("#").isdigit()), None)
+    if style and style not in style_names():
+        await update.message.reply_text(f"Art styles: {', '.join(style_names())}")
+        return
+    with session() as db:
+        d = db.get(Draft, draft_id) if draft_id else _latest_with_visual(db)
+        if d is not None and d.platform != "linkedin":
+            d = (
+                db.scalars(
+                    select(Draft).where(Draft.group_id == d.group_id, Draft.platform == "linkedin")
+                ).first()
+                or d
+            )
+        if d is None or not d.visual:
+            await update.message.reply_text("No draft with a visual found.")
+            return
+        await send_paint_prompt(context.bot, update.effective_chat.id, d, style)
+
+
 async def on_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
 
@@ -336,6 +485,10 @@ def run_bot() -> None:
         CallbackQueryHandler(on_button, pattern=r"^(approve|edit|reject|posted|kit):\d+$")
     )
     app.add_handler(CommandHandler("pending", on_pending, filters=only_roy))
+    app.add_handler(CommandHandler("paint", on_paint, filters=only_roy))
+    app.add_handler(
+        MessageHandler(only_roy & (filters.PHOTO | filters.Document.IMAGE), on_image, block=False)
+    )
     # One command per format (/idea, /team, ...) plus /daily for a random one.
     # block=False: generating takes minutes; keep handling buttons meanwhile.
     for name, fmt in FORMATS.items():
