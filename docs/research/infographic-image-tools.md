@@ -50,6 +50,16 @@ have, however good its layout is.
 | **Gemini app / ChatGPT / Microsoft Designer** (consumer apps) | Nano Banana Pro (about 2 free Pro images a day in the Gemini app, then it falls back to the base model), GPT Image | Small daily quotas | Roy trying styles and prompts by hand, to pick a look | **No API.** Scripting these apps breaks their terms, so they can't go in the pipeline |
 | **Self-hosted open weights** (Qwen-Image, FLUX.2 klein, Z-Image) | Strong models; Qwen-Image's text rendering is close to the paid leaders | Free software | Later, if volume grows | Needs a GPU. Our small VPS can't run them, and renting a GPU isn't free. Check each model's licence |
 
+**Can the pipeline use the free Gemini app (Canvas / Nano Banana 2)?** Not automatically.
+The free Nano Banana 2 quota (about 20 images a day on a free account, per Google's help page
+in March 2026) exists only inside the consumer app, which has no API. Driving the app with a
+scripted, logged-in browser breaks Google's terms ("automated means") and puts Roy's whole
+Google account at risk. The official Gemini CLI `nanobanana` extension also needs a Gemini API
+key, so it is billed. The free route that stays within the terms is **semi-manual**: the
+pipeline writes a ready-to-paste Nano Banana prompt into the Telegram review message, Roy
+generates the image in the Gemini app on his phone, and he sends it back to the bot to attach
+to the posting kit. The same model through the API costs $0.067 (1K) / $0.101 (2K) per image.
+
 Note: **no Gemini image model has a free API tier.** Google's free preview path closed in
 November 2025, and the pricing page lists every Nano Banana model as paid only.
 
