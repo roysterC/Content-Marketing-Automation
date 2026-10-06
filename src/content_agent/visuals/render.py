@@ -7,7 +7,10 @@ headless Chromium turns them into the PDF LinkedIn takes for document posts.
 import logging
 from pathlib import Path
 
+import qrcode
+import qrcode.image.svg
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from markupsafe import Markup
 from playwright.sync_api import sync_playwright
 from sqlalchemy import select
 
@@ -19,6 +22,7 @@ log = logging.getLogger(__name__)
 
 TEMPLATES = Path(__file__).parent / "templates"
 SLIDE_W, SLIDE_H = 1080, 1350
+A4_W, A4_H = 794, 1123  # A4 at 96 dpi, for the lead-magnet guide
 
 AUTHOR = "Roy"
 TAGLINE = "Automation for busy small businesses"
@@ -37,6 +41,47 @@ def render_idea_html(idea: dict) -> str:
 
 def render_orgchart_html(chart: dict) -> str:
     return _env.get_template("orgchart.html").render(chart=chart, author=AUTHOR, tagline=TAGLINE)
+
+
+def qr_svg(url: str) -> Markup:
+    """An inline SVG QR code, so printed or saved copies of the guide still link."""
+    img = qrcode.make(url, image_factory=qrcode.image.svg.SvgPathImage, border=1)
+    return Markup(img.to_string(encoding="unicode"))
+
+
+def render_guide_html(guide: dict, booking_url: str = "") -> str:
+    return _env.get_template("guide.html").render(
+        g=guide,
+        author=AUTHOR,
+        tagline=TAGLINE,
+        booking_url=booking_url,
+        qr_svg=qr_svg(booking_url) if booking_url else "",
+    )
+
+
+def guide_page_labels(guide: dict) -> list[str]:
+    """Names for the guide's pages, in order, for text-fit messages."""
+    autos = [f"automation {i} ({a['name']})" for i, a in enumerate(guide["automations"], 1)]
+    return ["cover", "intro", *autos, "where to start", "call to action"]
+
+
+def render_guide(html: str, out_stem: Path) -> tuple[Path, list[float]]:
+    """Write <out_stem>.pdf (A4, one section.page per sheet) and <out_stem>-cover.png.
+    Returns the PDF path and each page's text scale."""
+    out_stem.parent.mkdir(parents=True, exist_ok=True)
+    pdf_path = out_stem.with_suffix(".pdf")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(executable_path=get_settings().chromium_path or None)
+        page = browser.new_page(viewport={"width": A4_W, "height": A4_H}, device_scale_factor=2)
+        page.set_content(html, wait_until="networkidle")
+        page.wait_for_selector("body[data-ready]", state="attached", timeout=15000)
+        page.screenshot(path=str(out_stem.parent / f"{out_stem.name}-cover.png"))
+        page.pdf(path=str(pdf_path), format="A4", print_background=True)
+        scales = page.eval_on_selector_all(
+            "section.page", "els => els.map(e => parseFloat(e.dataset.scale || 1))"
+        )
+        browser.close()
+    return pdf_path, scales
 
 
 def poster_path(draft_id: int) -> Path:

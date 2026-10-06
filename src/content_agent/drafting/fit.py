@@ -13,7 +13,13 @@ from pathlib import Path
 
 from content_agent.drafting.draft import SCHEMA as DRAFT_SCHEMA
 from content_agent.llm import LLMError, ask_json
-from content_agent.visuals.render import render_carousel, render_png
+from content_agent.visuals.render import (
+    guide_page_labels,
+    render_carousel,
+    render_guide,
+    render_guide_html,
+    render_png,
+)
 
 log = logging.getLogger(__name__)
 
@@ -88,3 +94,23 @@ def render_poster_fitted(
     scale = render_png(make_html(data), out_path)
     log.info("%s re-rendered; text scale now %.0f%%", label, scale * 100)
     return data
+
+
+def render_guide_fitted(
+    guide: dict, schema: dict, out_stem: Path, booking_url: str = ""
+) -> tuple[Path, dict]:
+    """Render the guide PDF, shortening and re-rendering pages that are too cramped.
+    Returns the PDF path and the (possibly shortened) guide content."""
+    path, scales = render_guide(render_guide_html(guide, booking_url), out_stem)
+    problems = fit_problems(scales, guide_page_labels(guide))
+    if not problems:
+        return path, guide
+    log.info("Guide too cramped, shortening: %s", "; ".join(problems))
+    try:
+        guide = tighten(guide, schema, problems)
+    except LLMError as e:
+        log.warning("Couldn't shorten the guide (%s); keeping the shrunk version", e)
+        return path, guide
+    path, scales = render_guide(render_guide_html(guide, booking_url), out_stem)
+    log.info("Guide re-rendered; smallest text scale now %.0f%%", min(scales) * 100)
+    return path, guide

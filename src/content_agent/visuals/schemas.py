@@ -115,3 +115,104 @@ ORGCHART = {
     ],
     "additionalProperties": False,
 }  # fmt: skip
+
+
+_STEP = {
+    "type": "object",
+    "properties": {
+        "icon": ICON,
+        "title": _str("Max ~5 words"),
+        "detail": _str("One plain sentence, max ~14 words"),
+    },
+    "required": ["icon", "title", "detail"],
+    "additionalProperties": False,
+}
+
+GUIDE = {
+    "type": "object",
+    "properties": {
+        "title": _str("Guide title, max ~9 words"),
+        "subtitle": _str("One line on what the reader gets, max ~16 words"),
+        "sector_label": _str("Who it's for, title case, e.g. 'Salon owners'"),
+        "intro": {
+            "type": "object",
+            "properties": {
+                "headline": _str("Why this matters, max ~10 words"),
+                "body": _str("2-3 short sentences in the owner's world, max ~60 words"),
+                "stats": {
+                    "type": "array",
+                    "description": (
+                        "0-3 REAL statistics found on the web, each with its source URL. "
+                        "Leave empty rather than estimate."
+                    ),
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "value": _str("Max ~7 characters, e.g. '62%'"),
+                            "label": _str("Max ~10 words"),
+                            "source": _str("Source URL"),
+                        },
+                        "required": ["value", "label", "source"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+            "required": ["headline", "body", "stats"],
+            "additionalProperties": False,
+        },
+        "automations": {
+            "type": "array",
+            "description": "Exactly 5 automations, ordered from quickest win to most involved",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "icon": ICON,
+                    "name": _str("The automation, max ~5 words, e.g. 'Missed-call text back'"),
+                    "nickname": _str("Friendly job title, 1-3 words, e.g. 'Call Catcher'"),
+                    "problem": _str("The pain in the owner's words, max ~30 words"),
+                    "steps": {
+                        "type": "array",
+                        "description": "3-4 steps of how it works",
+                        "items": _STEP,
+                    },
+                    "needs": {
+                        "type": "array",
+                        "description": "2-4 things they need, max ~6 words each",
+                        "items": {"type": "string"},
+                    },
+                    "time_saved": _str("Estimate, max ~9 characters, e.g. '~2 hrs/wk'"),
+                    "time_assumption": _str(
+                        "The working behind the estimate, max ~20 words, e.g. 'If you miss "
+                        "5 calls a day and spend 3 minutes ringing each back'"
+                    ),
+                    "effort": {"type": "string", "enum": ["Quick win", "Afternoon", "Project"]},
+                },
+                "required": [
+                    "icon", "name", "nickname", "problem", "steps", "needs",
+                    "time_saved", "time_assumption", "effort",
+                ],
+                "additionalProperties": False,
+            },
+        },
+        "start_here": {
+            "type": "object",
+            "properties": {
+                "headline": _str("Max ~8 words"),
+                "advice": _str("1-2 sentences on what to do first, max ~35 words"),
+            },
+            "required": ["headline", "advice"],
+            "additionalProperties": False,
+        },
+        "cta": {
+            "type": "object",
+            "properties": {
+                "headline": _str("The ask, max ~8 words"),
+                "body": _str("What the free call covers, max ~35 words"),
+            },
+            "required": ["headline", "body"],
+            "additionalProperties": False,
+        },
+    },
+    "required": ["title", "subtitle", "sector_label", "intro", "automations", "start_here", "cta"],
+    "additionalProperties": False,
+}  # fmt: skip

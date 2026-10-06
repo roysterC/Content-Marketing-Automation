@@ -21,7 +21,7 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 
 ## Pipeline
 1. **Pick + research** — each weekday morning the generator picks a content format at random
-   (weights in `config/formats.yaml`: currently 75% `idea`, 25% `team`) and a business type
+   (weights in `config/formats.yaml`: 67 `idea` : 23 `team` : 10 `offer`, offer only once the guide is live) and a business type
    (weighted towards the initial focus, avoiding recently used ones). Claude researches the
    topic with live web search. RSS feeds are no longer part of the daily run (Reddit removed
    as too noisy); `ingest`/`score`/`draft` remain as manual extras.
@@ -34,8 +34,11 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
    ruled out any cost). Direct publishing through the free official APIs (Facebook Page via
    the Graph API, LinkedIn via self-serve "Share on LinkedIn", Instagram optional) is
    **deferred**; revisit only if manual posting becomes a chore. The kit stays the fallback.
-6. **Engage** — Facebook: comment-keyword → DM lead magnet via Messenger tooling (e.g. ManyChat). LinkedIn: agent **drafts** replies/DMs for Roy to send manually.
-7. **Lead funnel** — lead magnet → landing page w/ email capture → short nurture sequence → Cal.com booking → CRM.
+6. **Engage** — people comment the keyword (Facebook) or ask (LinkedIn); Roy sends the guide
+   **by hand** using the DM text in the posting kit. No DM automation for now (new account,
+   low volume); revisit Facebook comment-to-DM (e.g. ManyChat) as volume grows.
+7. **Lead funnel** — free PDF guide (hosted on Google Drive) → booking link (Cal.com) in the
+   guide and the DM. **No email list or nurture sequence** for now. CRM later.
 8. **Analytics** — weekly metric pull, tag posts by pillar/hook/format, feed top performers back into drafting prompts.
 
 ## Design standard (applies to every visual)
@@ -72,7 +75,7 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 1. **Phase 1 (start here):** research ingest → drafting → visual templates → Slack/Telegram approval. Roy posts manually; judge quality.
 2. **Phase 2:** publishing. Done as manual posting from a Telegram posting kit; API
    automation deferred.
-3. **Phase 3:** lead magnet, landing page, email nurture, Facebook comment-to-DM.
+3. **Phase 3:** lead magnet guide, CTAs in posts, manual DMs (email and DM automation deferred).
 4. **Phase 4:** analytics feedback loop (once ~30 posts of data exist).
 
 ## Status (update as phases progress)
@@ -89,7 +92,13 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
   reminders. Direct API publishing deferred (findings: Facebook Page = easiest, token doesn't
   expire; LinkedIn self-serve = 60-day logins with no auto-refresh, PDF documents unproven,
   no engagement stats for self-serve apps; Instagram = needs publicly hosted JPEGs).
-- **Phase 3: not started.**
+- **Phase 3: built (manual DMs).** `content-agent guide` / `/guide`: Claude researches and
+  writes the guide (`config/funnel.yaml`), fact-check, A4 PDF from `visuals/templates/guide.html`
+  with a per-page text-fit check and a booking QR, sent to Telegram for review. Once
+  `guide.url` is set: posts for `guide.for_sectors` get the CTA (LinkedIn link in the first
+  comment, Facebook "comment GUIDE"), the `offer` format joins the draw (67/23/10) and the
+  kit adds DM text. Still open: Roy to review the guide, upload it, add the link and a
+  Cal.com booking link.
 - **Phase 4: not started.** Needs ~30 published posts.
 - Content quality is improved iteratively alongside every phase (prompts, templates,
   examples, feedback from Roy's edits and rejections).
@@ -100,14 +109,17 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
 - Claude access: **Roy's Claude Pro/Max plan via the Claude Code CLI** (`claude -p`, `LLM_BACKEND=claude_code`) to avoid API costs; the pay-per-token API backend stays available (`LLM_BACKEND=api`)
 
 - Content generation: **one shared pipeline over pluggable formats**; one package per weekday
-  morning; format chosen by weighted random (75% idea / 25% team); feeds out of the daily run
+  morning; format chosen by weighted random (67 idea / 23 team / 10 offer once the guide is live); feeds out of the daily run
 
 - Publishing: **no paid scheduler; Roy posts manually from the posting kit.** API automation
   deferred
+- Lead magnet: **"The 5 automations every salon should run"** PDF, sent by hand to
+  commenters; no email, no DM automation for now
 
 ## Open decisions
 - If API publishing is revisited: whether the LinkedIn first comment may be posted through
   the API (Roy's own comment on his own post, but "no automated comments" is a hard rule),
   and whether Instagram is in scope
-- First lead magnet topic (candidate: "The 5 automations every salon should run to stop losing bookings to missed calls, with time saved for each")
+- When to add DM automation (Facebook comment-to-DM) and an email list: once volume makes
+  manual DMs a chore
 - Brand voice examples — Roy to supply

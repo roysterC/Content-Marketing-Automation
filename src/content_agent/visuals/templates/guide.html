@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>{{ g.title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Brand tokens - same palette as the carousel/infographic, with a light "paper"
+     variant for the inner pages so the guide reads and prints like a document. */
+  :root {
+    --navy: #0f1b2d;
+    --navy-2: #16263f;
+    --text-dark: #f4f1ea;
+    --muted-dark: #a9b4c6;
+    --ink: #13213a;
+    --ink-muted: #5a6880;
+    --paper: #ffffff;
+    --paper-2: #f6f4ef;
+    --line: #e4e0d6;
+    --accent: #f2a541;
+    --accent-ink: #b8711a;
+    --accent-soft: #fdf1df;
+    --good: #2f9e74;
+    --good-soft: #e3f4ec;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Inter", system-ui, sans-serif; background: #ddd; }
+  .icon { display: block; width: 1em; height: 1em; }
+
+  /* One A4 page at 96dpi. All sizes in em so the fit script can shrink a page evenly. */
+  .page {
+    width: 794px; height: 1123px; position: relative; overflow: hidden;
+    font-size: 16px; padding: 4.2em 3.6em 4.6em;
+    background: var(--paper); color: var(--ink);
+    display: flex; flex-direction: column; gap: 1.5em;
+    break-after: page; page-break-after: always;
+  }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+  .page.dark {
+    background:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0) 0 0 / 1.8em 1.8em,
+      radial-gradient(40em 28em at 100% 0%, rgba(242,165,65,0.16), transparent 60%),
+      linear-gradient(160deg, var(--navy) 55%, var(--navy-2));
+    color: var(--text-dark);
+  }
+  .running {
+    position: absolute; left: 3.6em; right: 3.6em; bottom: 1.9em;
+    display: flex; justify-content: space-between; font-size: 0.8em; color: var(--ink-muted);
+    border-top: 1px solid var(--line); padding-top: 0.8em;
+  }
+  .dark .running { border-color: rgba(255,255,255,0.12); color: var(--muted-dark); }
+  .running strong { color: inherit; font-weight: 700; }
+
+  .kicker { font-size: 0.85em; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-ink); }
+  .dark .kicker { color: var(--accent); }
+  h1 { font-size: 3.3em; line-height: 1.05; font-weight: 800; letter-spacing: -0.025em; }
+  h2 { font-size: 2.1em; line-height: 1.12; font-weight: 800; letter-spacing: -0.02em; }
+  h3 { font-size: 1.05em; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); }
+  p.lead { font-size: 1.15em; line-height: 1.55; color: var(--ink-muted); }
+  .dark p.lead { color: var(--muted-dark); }
+
+  /* Cover */
+  .cover { justify-content: center; gap: 1.8em; }
+  .cover .pill { align-self: flex-start; padding: 0.45em 1em; border-radius: 99em; background: rgba(242,165,65,0.16); color: var(--accent); font-weight: 700; font-size: 0.95em; }
+  .cover h1 { font-size: 3.9em; }
+  .cover .rule { width: 5em; height: 0.35em; border-radius: 1em; background: var(--accent); }
+  .cover .icons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.9em; margin-top: 1.2em; }
+  .cover .icons div { aspect-ratio: 1; border-radius: 1em; display: grid; place-items: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: var(--accent); }
+  .cover .icons .icon { width: 2.3em; height: 2.3em; }
+  .cover .by { font-size: 1.05em; color: var(--muted-dark); }
+  .cover .by strong { color: var(--text-dark); }
+
+  /* Intro */
+  .stats { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 0.9em; }
+  .stat { background: var(--paper-2); border-radius: 0.9em; padding: 1.1em 1.1em; }
+  .stat .v { font-size: 2.2em; font-weight: 800; color: var(--accent-ink); line-height: 1; }
+  .stat .l { font-size: 0.92em; margin-top: 0.4em; line-height: 1.35; }
+  .stat .s { font-size: 0.68em; color: var(--ink-muted); margin-top: 0.5em; word-break: break-all; }
+  .toc { display: flex; flex-direction: column; gap: 0.6em; }
+  .toc-row { display: grid; grid-template-columns: 2.6em 1fr auto; gap: 0.9em; align-items: center; padding: 0.75em 1em; border: 1px solid var(--line); border-radius: 0.8em; }
+  .toc-row .n { width: 2.6em; height: 2.6em; border-radius: 50%; background: var(--accent); color: var(--navy); display: grid; place-items: center; font-weight: 800; }
+  .toc-row .t { font-weight: 700; font-size: 1.05em; }
+  .toc-row .t small { display: block; font-weight: 500; color: var(--ink-muted); font-size: 0.85em; margin-top: 0.1em; }
+
+  /* Effort pill */
+  .effort { font-size: 0.78em; font-weight: 700; padding: 0.35em 0.8em; border-radius: 99em; white-space: nowrap; }
+  .effort.quick-win { background: var(--good-soft); color: var(--good); }
+  .effort.afternoon { background: var(--accent-soft); color: var(--accent-ink); }
+  .effort.project { background: #ece9f8; color: #5b4bb7; }
+
+  /* Automation page */
+  .auto-head { display: flex; align-items: center; gap: 1.1em; }
+  .auto-head .badge { width: 4.2em; height: 4.2em; border-radius: 1.1em; flex: none; display: grid; place-items: center; background: var(--navy); color: var(--accent); }
+  .auto-head .badge .icon { width: 2.1em; height: 2.1em; }
+  .auto-head .meta { display: flex; flex-direction: column; gap: 0.35em; }
+  .auto-head .nick { font-weight: 700; color: var(--accent-ink); }
+  .problem { background: var(--paper-2); border-left: 0.3em solid var(--accent); border-radius: 0 0.8em 0.8em 0; padding: 1em 1.2em; font-size: 1.08em; line-height: 1.5; }
+  .problem strong { font-weight: 800; }
+  .flow { display: flex; flex-direction: column; gap: 0.7em; }
+  .flow-step { display: grid; grid-template-columns: 3em 1fr; gap: 1em; align-items: center; position: relative; }
+  .flow-step:not(:last-child)::after { content: ""; position: absolute; left: 1.45em; top: 3em; height: 0.7em; width: 2px; background: var(--accent); }
+  .flow-step .n { width: 3em; height: 3em; border-radius: 50%; background: var(--accent); color: var(--navy); display: grid; place-items: center; position: relative; }
+  .flow-step .n .icon { width: 1.4em; height: 1.4em; }
+  .flow-step .n b { position: absolute; top: -0.3em; right: -0.3em; width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--navy); color: #fff; font-size: 0.72em; display: grid; place-items: center; }
+  .flow-step .card { border: 1px solid var(--line); border-radius: 0.8em; padding: 0.75em 1em; }
+  .flow-step .t { font-weight: 700; }
+  .flow-step .d { color: var(--ink-muted); font-size: 0.95em; margin-top: 0.15em; line-height: 1.4; }
+  .two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 1em; margin-top: auto; }
+  .box { border-radius: 1em; padding: 1.2em 1.3em; }
+  .box.needs { border: 1px solid var(--line); }
+  .needs ul { list-style: none; display: flex; flex-direction: column; gap: 0.55em; margin-top: 0.7em; }
+  .needs li { display: grid; grid-template-columns: 1.4em 1fr; gap: 0.6em; align-items: start; line-height: 1.35; }
+  .needs li .tick { width: 1.4em; height: 1.4em; border-radius: 50%; background: var(--good-soft); color: var(--good); display: grid; place-items: center; }
+  .needs li .tick .icon { width: 0.9em; height: 0.9em; }
+  .box.time { background: var(--navy); color: var(--text-dark); }
+  .box.time h3 { color: var(--muted-dark); }
+  .box.time .v { font-size: 2.6em; font-weight: 800; color: var(--accent); margin-top: 0.25em; line-height: 1; }
+  .box.time .a { font-size: 0.88em; color: var(--muted-dark); margin-top: 0.6em; line-height: 1.4; }
+  .box.time .est { font-size: 0.72em; color: var(--muted-dark); margin-top: 0.7em; opacity: 0.85; }
+
+  /* Start here */
+  .ladder { display: flex; flex-direction: column; gap: 0.7em; }
+  .rung { display: grid; grid-template-columns: 2.8em 1fr auto auto; gap: 1em; align-items: center; padding: 0.85em 1.1em; border-radius: 0.9em; background: var(--paper-2); }
+  .rung .n { width: 2.8em; height: 2.8em; border-radius: 0.8em; background: var(--navy); color: var(--accent); display: grid; place-items: center; }
+  .rung .n .icon { width: 1.4em; height: 1.4em; }
+  .rung .t { font-weight: 700; }
+  .rung .ts { font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
+  .advice { border: 2px dashed var(--accent); border-radius: 1em; padding: 1.2em 1.3em; font-size: 1.08em; line-height: 1.5; }
+
+  /* CTA */
+  .cta { justify-content: center; gap: 1.6em; }
+  .cta .card { display: grid; grid-template-columns: 1fr auto; gap: 1.6em; align-items: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 1.3em; padding: 1.6em; }
+  .stat .s a { color: inherit; text-decoration: none; }
+  .cta .link { display: block; text-decoration: none; font-size: 1.15em; font-weight: 700; color: var(--accent); word-break: break-all; margin-top: 0.4em; }
+  .cta .qr { width: 9em; height: 9em; background: #fff; border-radius: 0.8em; padding: 0.6em; }
+  .cta .qr svg { width: 100%; height: 100%; display: block; }
+  .cta ul { list-style: none; display: flex; flex-direction: column; gap: 0.6em; }
+  .cta li { display: flex; gap: 0.7em; align-items: center; color: var(--muted-dark); }
+  .cta li .icon { color: var(--accent); width: 1.2em; height: 1.2em; flex: none; }
+</style>
+</head>
+<body>
+{% set autos = g.automations %}
+{% set total = autos | length + 4 %}
+
+<section class="page dark cover">
+  <span class="pill">Free guide · {{ g.sector_label }}</span>
+  <h1>{{ g.title }}</h1>
+  <div class="rule"></div>
+  <p class="lead">{{ g.subtitle }}</p>
+  <div class="icons">{% for a in autos %}<div>{{ icon(a.icon) }}</div>{% endfor %}</div>
+  <p class="by">By <strong>{{ author }}</strong> · {{ tagline }}</p>
+</section>
+
+<section class="page">
+  <span class="kicker">Before you start</span>
+  <h2>{{ g.intro.headline }}</h2>
+  <p class="lead">{{ g.intro.body }}</p>
+  {% if g.intro.stats %}
+  <div class="stats" style="--n: {{ g.intro.stats | length }}">
+    {% for s in g.intro.stats %}
+    <div class="stat"><div class="v">{{ s.value }}</div><div class="l">{{ s.label }}</div><div class="s">Source: <a href="{{ s.source }}">{{ s.source }}</a></div></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <h3>What's inside</h3>
+  <div class="toc">
+    {% for a in autos %}
+    <div class="toc-row">
+      <span class="n">{{ loop.index }}</span>
+      <span class="t">{{ a.name }}<small>{{ a.nickname }}</small></span>
+      <span class="effort {{ a.effort | lower | replace(' ', '-') }}">{{ a.effort }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="running"><span><strong>{{ g.title }}</strong></span><span>2 / {{ total }}</span></div>
+</section>
+
+{% for a in autos %}
+<section class="page">
+  <span class="kicker">Automation {{ loop.index }} of {{ autos | length }}</span>
+  <div class="auto-head">
+    <span class="badge">{{ icon(a.icon) }}</span>
+    <div class="meta">
+      <h2>{{ a.name }}</h2>
+      <div><span class="nick">“{{ a.nickname }}”</span> &nbsp; <span class="effort {{ a.effort | lower | replace(' ', '-') }}">{{ a.effort }}</span></div>
+    </div>
+  </div>
+  <p class="problem"><strong>The problem:</strong> {{ a.problem }}</p>
+  <h3>How it works</h3>
+  <div class="flow">
+    {% for s in a.steps %}
+    <div class="flow-step">
+      <span class="n">{{ icon(s.icon) }}<b>{{ loop.index }}</b></span>
+      <div class="card"><div class="t">{{ s.title }}</div><div class="d">{{ s.detail }}</div></div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="two">
+    <div class="box needs">
+      <h3>What you need</h3>
+      <ul>{% for n in a.needs %}<li><span class="tick">{{ icon('check') }}</span><span>{{ n }}</span></li>{% endfor %}</ul>
+    </div>
+    <div class="box time">
+      <h3>Time you could get back</h3>
+      <div class="v">{{ a.time_saved }}</div>
+      <div class="a">{{ a.time_assumption }}</div>
+      <div class="est">An estimate, not a promise. Your numbers will differ.</div>
+    </div>
+  </div>
+  <div class="running"><span><strong>{{ g.title }}</strong></span><span>{{ loop.index + 2 }} / {{ total }}</span></div>
+</section>
+{% endfor %}
+
+<section class="page">
+  <span class="kicker">Where to start</span>
+  <h2>{{ g.start_here.headline }}</h2>
+  <div class="ladder">
+    {% for a in autos %}
+    <div class="rung">
+      <span class="n">{{ icon(a.icon) }}</span>
+      <span class="t">{{ loop.index }}. {{ a.name }}</span>
+      <span class="ts">{{ a.time_saved }}</span>
+      <span class="effort {{ a.effort | lower | replace(' ', '-') }}">{{ a.effort }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="advice">{{ g.start_here.advice }}</p>
+  <div class="running"><span><strong>{{ g.title }}</strong></span><span>{{ total - 1 }} / {{ total }}</span></div>
+</section>
+
+<section class="page dark cta">
+  <span class="kicker">Next step</span>
+  <h1>{{ g.cta.headline }}</h1>
+  <p class="lead">{{ g.cta.body }}</p>
+  {% if booking_url %}
+  <div class="card">
+    <div>
+      <span class="kicker">Book a free 20-minute chat</span>
+      <a class="link" href="{{ booking_url }}">{{ booking_url }}</a>
+    </div>
+    <div class="qr">{{ qr_svg }}</div>
+  </div>
+  {% endif %}
+  <ul>
+    <li>{{ icon('check') }} No jargon, no hard sell</li>
+    <li>{{ icon('check') }} We look at how your bookings come in today</li>
+    <li>{{ icon('check') }} You leave with the one automation worth doing first</li>
+  </ul>
+  <div class="running"><span><strong>{{ author }}</strong> · {{ tagline }}</span><span>{{ total }} / {{ total }}</span></div>
+</section>
+
+<script>
+  // Shrink any page whose content overflows, evenly (all sizes are em). Runs after web
+  // fonts load; the renderer waits for data-ready and reads each page's data-scale.
+  function fit() {
+    document.querySelectorAll(".page").forEach((p) => {
+      let size = 16;
+      p.style.fontSize = size + "px";
+      while (p.scrollHeight > p.clientHeight && size > 10) {
+        size -= 0.5;
+        p.style.fontSize = size + "px";
+      }
+      p.dataset.scale = size / 16;
+    });
+  }
+  document.fonts.ready.then(fit).finally(() => { document.body.dataset.ready = "1"; });
+</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Content-Marketing-Automation
 
-Phase 1 of the content agent described in [`CLAUDE.md`](CLAUDE.md). Every weekday morning
+The content agent described in [`CLAUDE.md`](CLAUDE.md). Every weekday morning
 it picks a post format at random, researches a topic for a business type on the web,
 writes the LinkedIn and Facebook posts, renders a single-image visual and a carousel,
 and sends the package to Telegram for approval. Nothing is published automatically: you
@@ -8,7 +8,7 @@ approve a post, then post it yourself.
 
 ```
 07:00 weekdays: content-agent daily
-  pick format (75% idea, 25% team)  →  pick business type (not one used recently)
+  pick format (67 idea : 23 team : 10 offer, offer only once the guide is live)  →  pick business type (not one used recently)
     →  Claude researches (web) + writes posts, visual and carousel
     →  fact-check  →  render visual + carousel (text-fit check)
     →  Telegram: Approve / Edit / Reject
@@ -19,6 +19,7 @@ Formats live in `src/content_agent/formats/` and their settings in `config/forma
   (problem → how it works → outcomes).
 - **team**: "Your Barbershop's AI Team", the business's everyday jobs as automation "staff"
   on an org chart.
+- **offer**: a post promoting the free guide (see below). Sits out until the guide is live.
 
 ## Setup
 
@@ -54,6 +55,7 @@ Telegram bot setup:
 | `content-agent daily` | The morning run (what the cron calls): picks a format by the weights in `config/formats.yaml`, builds `posts_per_day` packages and sends them to Telegram |
 | `content-agent make idea --sector "nail salons"` | One package in a specific format (`idea` or `team`), on demand. Leave out `--sector` for a weighted random business type |
 | `content-agent brief notes.txt --pillar proof` | Draft a post from your own notes (case studies, offers). Only facts in your notes are used |
+| `content-agent guide` | Write and render the free guide in `config/funnel.yaml` (PDF), and send it to Telegram for review. `--rerender` redraws the saved one without a Claude call, e.g. after adding your booking link |
 | `content-agent remind` | Remind you in Telegram about approved drafts not yet marked posted (cron, 12:00 weekdays) |
 | `content-agent review` | Send any pending drafts to Telegram with Approve / Edit / Reject buttons |
 | `content-agent bot` | Long-running process that handles the button presses, edits and commands |
@@ -65,6 +67,7 @@ From your phone, the bot takes:
 - `/daily`: today's random format.
 - `/idea` or `/idea dog groomers`, `/team` or `/team barbers`: a specific format.
 - `/pending`: resend drafts you haven't reviewed.
+- `/guide`: write the free guide; `/guide rerender` redraws the saved one.
 
 Each package takes a few minutes, and the bot keeps handling your buttons meanwhile.
 
@@ -92,6 +95,29 @@ Nothing is auto-rejected, so the final call is yours.
 
 At 12:00 on weekdays the bot reminds you about anything approved but not yet marked
 posted. Each reminder has a **🔁 Resend kit** button.
+
+## The free guide (lead magnet)
+
+Posts point people at a free PDF guide, "The 5 automations every salon should run" by
+default. You send it by hand to anyone who asks; there's no email list and no DM bot yet.
+
+1. Run `/guide` (or `content-agent guide`). Claude researches and writes it, it's
+   fact-checked and rendered as an A4 PDF, and the PDF, its cover and the fact-check
+   arrive in Telegram. Real statistics carry their source; time savings are labelled
+   estimates with the working shown.
+2. Happy with it? Upload the PDF to Google Drive ("Anyone with the link can view").
+3. In `config/funnel.yaml` **on GitHub**, set `guide.url` to that link (and
+   `booking_url` to your Cal.com link when you have one), then merge to `main`. Don't edit
+   it on the VPS: each deploy resets the VPS copy. If you added a booking link, run
+   `/guide rerender` so the last page gets the link and a QR code, and re-upload.
+
+Once `guide.url` is set:
+- Posts for the business types in `guide.for_sectors` end with a call to action:
+  LinkedIn says "free guide in the first comment" and the link goes first in the first
+  comment; Facebook asks people to comment **GUIDE**.
+- The `offer` format joins the daily draw (~10%), written from the guide's actual content.
+- The posting kit for those posts ends with a ready-to-copy DM. When someone comments
+  GUIDE on Facebook, or asks on LinkedIn, send it to them yourself.
 
 ## Running it on a VPS
 
@@ -140,6 +166,7 @@ Actions → **Test and deploy** → **Run workflow**.
 
 ## What to customise
 
+- `config/funnel.yaml`: the free guide's topic, its link, the comment keyword and your booking link.
 - `config/sources.yaml`: research feeds. Any RSS/Atom URL works.
 - `config/brand_voice.md`: tone and format rules sent with every draft.
 - `config/examples/`: 10–20 example posts in the style you want. This has the biggest effect on draft quality.

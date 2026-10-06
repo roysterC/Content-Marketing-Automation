@@ -12,7 +12,7 @@ carousel with the text-fit check -> (optionally) send to Telegram.
 import logging
 import random
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import yaml
 from sqlalchemy import select
@@ -22,7 +22,9 @@ from content_agent.db import Item, session
 from content_agent.drafting.draft import _save, _system_prompt, share_poster
 from content_agent.drafting.factcheck import factcheck
 from content_agent.drafting.fit import render_carousel_fitted, render_poster_fitted
+from content_agent.drafting.guide import outline as guide_outline
 from content_agent.formats import FORMATS, Format
+from content_agent.funnel import Funnel, load_funnel
 from content_agent.llm import ask_json
 from content_agent.research.fetch import title_hash
 from content_agent.visuals.render import poster_path
@@ -54,8 +56,13 @@ def load_settings(path=CONFIG_DIR / "formats.yaml") -> Settings:
     )
 
 
-def pick_format(settings: Settings, rng=random) -> Format:
-    names = [n for n, w in settings.format_weights.items() if w > 0]
+def pick_format(settings: Settings, rng=random, guide_live: bool = False) -> Format:
+    """Weighted random format. Formats that promote the guide sit out until it's live."""
+    names = [
+        n
+        for n, w in settings.format_weights.items()
+        if w > 0 and (guide_live or not FORMATS[n].promotes_guide)
+    ]
     weights = [settings.format_weights[n] for n in names]
     return FORMATS[rng.choices(names, weights=weights)[0]]
 
@@ -90,11 +97,11 @@ def _store_and_render(db, fmt: Format, sector: str, result: dict, checks: dict) 
         source=f"Claude {fmt.label}",
         category=fmt.name,
         business_type=sector,
-        pillar="workflow",
+        pillar=fmt.pillar,
         status="drafted",
     )
     db.add(item)
-    drafts = _save(db, result, "workflow", item, checks)
+    drafts = _save(db, result, fmt.pillar, item, checks)
     db.flush()
 
     linkedin = drafts[0]
@@ -115,23 +122,59 @@ def _store_and_render(db, fmt: Format, sector: str, result: dict, checks: dict) 
     return [d.id for d in drafts]
 
 
+def guide_ready(funnel: Funnel) -> bool:
+    """The guide has a link and its saved content (offer posts are written from it)."""
+    return funnel.live and bool(guide_outline(funnel))
+
+
+def with_guide_cta(fmt: Format, sector: str, funnel: Funnel) -> bool:
+    return funnel.live and (fmt.promotes_guide or funnel.offers_guide(sector))
+
+
+def build_prompt(fmt: Format, sector: str, recent: str, funnel: Funnel) -> str:
+    prompt = fmt.task.format(
+        sector=sector,
+        recent=recent or "  (none yet)",
+        guide_outline=guide_outline(funnel) if fmt.promotes_guide else "",
+        keyword=funnel.keyword,
+    )
+    if with_guide_cta(fmt, sector, funnel):
+        prompt += funnel.post_instructions()
+    return prompt
+
+
 def generate(format_name: str, sector: str | None = None) -> list[int]:
     """Make one post package in the given format. Returns its draft ids."""
     fmt = FORMATS[format_name]
+    funnel = load_funnel()
+    if fmt.promotes_guide and not guide_ready(funnel):
+        raise RuntimeError(
+            f"The {fmt.label} format needs the guide: run `content-agent guide`, upload the "
+            "PDF and put its link in config/funnel.yaml"
+        )
     with session() as db:
         if not sector:
-            sector = pick_sector(load_settings(), [i.business_type or "" for i in _recent(db)])
+            settings = load_settings()
+            if fmt.promotes_guide:  # only business types the guide is written for
+                guide_for = {s.lower() for s in funnel.for_sectors}
+                weights = {
+                    k: v for k, v in settings.sector_weights.items() if k.lower() in guide_for
+                }
+                settings = replace(settings, sector_weights=weights or settings.sector_weights)
+            sector = pick_sector(settings, [i.business_type or "" for i in _recent(db)])
         sector = sector.strip()
         recent = _recent(db, fmt.name)
         recent_list = "\n".join(f"  - {i.title} ({i.business_type})" for i in recent)
         log.info("Generating %s for %s", fmt.label, sector)
         result = ask_json(
             system=_system_prompt(),
-            prompt=fmt.task.format(sector=sector, recent=recent_list or "  (none yet)"),
+            prompt=build_prompt(fmt, sector, recent_list, funnel),
             schema=fmt.schema,
             effort="high",
             web=True,
         )
+        if with_guide_cta(fmt, sector, funnel):
+            funnel.apply(result)
         checks = factcheck(
             {k: result[k] for k in ("linkedin", "facebook", "carousel", fmt.visual_key)},
             f"No source article: this {fmt.label} was written by Claude.\n"
@@ -144,9 +187,10 @@ def generate(format_name: str, sector: str | None = None) -> list[int]:
 def daily() -> list[int]:
     """The morning run: `posts_per_day` packages, each in a randomly weighted format."""
     settings = load_settings()
+    live = guide_ready(load_funnel())
     ids: list[int] = []
     for _ in range(settings.posts_per_day):
-        fmt = pick_format(settings)
+        fmt = pick_format(settings, guide_live=live)
         log.info("Today's format: %s", fmt.label)
         ids += generate(fmt.name)
     return ids

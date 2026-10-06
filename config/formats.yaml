@@ -4,10 +4,13 @@
 # one Facebook draft with a single-image visual and a carousel.
 posts_per_day: 1
 
-# Chance of each format, as relative weights (75 / 25 = three ideas for every team chart).
+# Chance of each format, as relative weights. `offer` (posts promoting the free guide)
+# only joins the draw once the guide is live (config/funnel.yaml has its link); until
+# then it's idea vs team at the same 67:23 ratio (about 75/25).
 formats:
-  idea: 75
-  team: 25
+  idea: 67
+  team: 23
+  offer: 10
 
 # Business types to write for, with relative weights. Higher = picked more often. The
 # initial client focus (phone-booking businesses) is weighted up.

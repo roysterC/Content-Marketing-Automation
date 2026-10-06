@@ -105,6 +105,25 @@ def make(
 
 
 @app.command()
+def guide(
+    rerender: Annotated[
+        bool, typer.Option(help="Re-render the saved guide without new content (no Claude call)")
+    ] = False,
+    send: Annotated[bool, typer.Option(help="Send the PDF to Telegram for review")] = True,
+) -> None:
+    """Write and render the free lead-magnet guide set in config/funnel.yaml."""
+    from content_agent.drafting import guide as g
+    from content_agent.funnel import load_funnel
+
+    result = g.rerender() if rerender else g.make_guide()
+    typer.echo(f"Guide: {result.pdf}")
+    if send:
+        from content_agent.approval.telegram_bot import send_guide
+
+        send_guide(result.pdf, result.cover, result.factcheck, load_funnel().live)
+
+
+@app.command()
 def render() -> None:
     """Render carousel PDFs for drafts that need them."""
     from content_agent.visuals.render import render_pending

@@ -32,6 +32,7 @@ from telegram.ext import (
 from content_agent.config import get_settings
 from content_agent.db import Draft, session
 from content_agent.formats import FORMATS
+from content_agent.funnel import load_funnel
 
 log = logging.getLogger(__name__)
 
@@ -144,6 +145,17 @@ async def send_kit(bot: Bot, chat_id, d: Draft) -> None:
         await bot.send_message(chat_id, d.body)
         if image := _image(d):
             await bot.send_document(chat_id, image)
+    funnel = load_funnel()
+    if funnel.promotes(d.platform, d.body, d.first_comment):
+        ask = (
+            f"comments {funnel.keyword}"
+            if d.platform == "facebook"
+            else "asks for the guide in a comment"
+        )
+        await bot.send_message(
+            chat_id, f"💬 When someone {ask}, send them this as a private message:"
+        )
+        await bot.send_message(chat_id, funnel.dm_text())
     await bot.send_message(
         chat_id, f"Tap Posted once #{d.id} is live.", reply_markup=posted_keyboard(d.id)
     )
@@ -181,6 +193,44 @@ def send_pending() -> int:
             return await _send_pending(bot, s.telegram_chat_id)
 
     return asyncio.run(main())
+
+
+def guide_summary(checks: dict, live: bool) -> str:
+    """The review message sent with a new guide PDF."""
+    lines = ["📘 New guide ready for review (PDF above, cover image too)."]
+    if checks.get("verdict") == "needs_attention":
+        lines += ["", "⚠️ Fact-check:"]
+        lines += [f"• {i['claim']} — {i['problem']}" for i in checks.get("issues", [])]
+    elif checks:
+        lines += ["", "✅ Fact-check passed"]
+    if not live:
+        lines += [
+            "",
+            (
+                "Happy with it? Upload the PDF (e.g. Google Drive, anyone with the link can "
+                "view), then set guide.url in config/funnel.yaml on GitHub and merge to main. Posts "
+                "start promoting it after the deploy."
+            ),
+        ]
+    text = "\n".join(lines)
+    return text if len(text) <= TELEGRAM_LIMIT else text[: TELEGRAM_LIMIT - 20] + "\n…(truncated)"
+
+
+async def _send_guide(bot: Bot, chat_id, pdf: Path, cover: Path, checks: dict, live: bool):
+    await bot.send_document(chat_id, pdf)
+    if cover.exists():
+        await bot.send_document(chat_id, cover)
+    await bot.send_message(chat_id, guide_summary(checks, live))
+
+
+def send_guide(pdf: Path, cover: Path, checks: dict, live: bool) -> None:
+    s = _settings()
+
+    async def main() -> None:
+        async with Bot(s.telegram_bot_token) as bot:
+            await _send_guide(bot, s.telegram_chat_id, pdf, cover, checks, live)
+
+    asyncio.run(main())
 
 
 def send_reminders() -> int:
@@ -309,9 +359,11 @@ def _generator_command(what: str, run):
 
 def _daily(sector: str | None) -> list[int]:
     """/daily: today's random format; a business type argument overrides the random one."""
-    from content_agent.generate import generate, load_settings, pick_format
+    from content_agent.funnel import load_funnel
+    from content_agent.generate import generate, guide_ready, load_settings, pick_format
 
-    return generate(pick_format(load_settings()).name, sector)
+    fmt = pick_format(load_settings(), guide_live=guide_ready(load_funnel()))
+    return generate(fmt.name, sector)
 
 
 def _make(name: str):
@@ -321,6 +373,31 @@ def _make(name: str):
         return generate(name, sector)
 
     return run
+
+
+async def on_guide(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/guide: write and render the free guide (/guide rerender: just re-render it)."""
+    from content_agent.drafting import guide as g
+    from content_agent.funnel import load_funnel
+
+    again = bool(context.args) and context.args[0].lower() == "rerender"
+    await update.message.reply_text(
+        "Re-rendering the guide." if again else "Writing the guide. This takes a few minutes."
+    )
+    try:
+        result = await asyncio.to_thread(g.rerender if again else g.make_guide)
+    except Exception as e:
+        log.exception("Guide failed")
+        await update.message.reply_text(f"Guide failed: {e}"[:TELEGRAM_LIMIT])
+        return
+    await _send_guide(
+        context.bot,
+        update.effective_chat.id,
+        result.pdf,
+        result.cover,
+        result.factcheck,
+        load_funnel().live,
+    )
 
 
 async def on_noop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -347,6 +424,7 @@ def run_bot() -> None:
             "daily", _generator_command("today's post", _daily), filters=only_roy, block=False
         )
     )
+    app.add_handler(CommandHandler("guide", on_guide, filters=only_roy, block=False))
     app.add_handler(MessageHandler(only_roy & filters.REPLY & filters.TEXT, on_reply))
     log.info("Approval bot running")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
