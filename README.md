@@ -100,7 +100,7 @@ The prompt fixes the look and leaves the layout to Nano Banana, so posts vary in
 composition without drifting in style:
 - **Fixed** (`config/art_style.yaml`, repeated word for word): painting technique,
   background, font, colours, line weight, box style and icon style. There are three
-  styles to compare (`gouache`, `watercolour`, `painterly`) and an `active` one.
+  styles (`gouache`, `watercolour`, `painterly`); `painterly` is the active one.
 - **Data**: the exact approved text (headline, problem, steps, figures, call to action,
   signature), so nothing new gets past the fact-check.
 - **Free**: layout, composition, hierarchy and illustration. Nano Banana designs those. Sample prompts for all three

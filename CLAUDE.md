@@ -84,8 +84,8 @@ Automate a social media presence (LinkedIn + Facebook) that wins **clients for R
   Still open: Roy's example posts and brand-voice edits; SQLite (not Postgres) is fine for
   now. Next format candidate: "industry problem" with its own poster.
   Painted images: semi-manual via the free Gemini app (prompt in Telegram → Roy replies
-  with the image → Claude text check → used in the kit). Roy still to pick the art style
-  (`gouache` / `watercolour` / `painterly`, samples in `docs/painted-style-samples.md`).
+  with the image → Claude text check → used in the kit). Art style: **`painterly`**
+  (Roy's pick); the prompt fixes the design system and leaves layout to Nano Banana.
 - **Phase 2: complete (manual posting).** Approve → copyable post text, attachment
   (carousel PDF with its LinkedIn document title, or the infographic), first comment, and a
   ✅ Posted button (records `posted_at` and an optional `post_url`); 12:00 weekday

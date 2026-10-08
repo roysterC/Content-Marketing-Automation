@@ -11,7 +11,7 @@
 # Once you have a favourite image, attach it in Gemini as a style reference with
 # every prompt; that's the strongest way to keep the look consistent.
 
-active: gouache
+active: painterly
 
 # The fixed design system, shared by every style. A style below can override any of
 # these keys (e.g. watercolour swaps the box style for ink outlines).
