@@ -78,7 +78,7 @@ Font: One geometric sans-serif (like Inter) for all text: extra-bold headline, s
 Colours: Deep navy #0f1b2d for main text and ink lines, warm amber #f2a541 for highlights, key numbers and the call to action, mint #7fd1ae for good outcomes, slate blue #a9b4c6 for secondary text. No other strong colours.
 Lines: One weight for every line, arrow and divider, about 3 px, rounded ends; amber where it shows flow.
 Boxes: Rounded corners (about 24 px), a pale cream wash inside and a thin navy ink outline, no shadows.
-Icons: Small, same-size icons painted in the illustration's technique, mostly amber and cream; never emoji or thin vector line icons.
+Icons: Small, same-size icons painted in the illustration's technique, mostly amber and navy ink; never emoji or thin vector line icons.
 
 CONTENT
 Use every “curly-quoted” text word for word, once each; text marked optional may be left out. Add no other words, numbers, logos or watermarks, including on objects.

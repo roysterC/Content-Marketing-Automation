@@ -65,6 +65,9 @@ styles:
       boxes: >-
         Rounded corners (about 24 px), a pale cream wash inside and a thin navy ink
         outline, no shadows.
+      icons: >-
+        Small, same-size icons painted in the illustration's technique, mostly amber and
+        navy ink; never emoji or thin vector line icons.
 
   painterly:
     name: Painterly digital
